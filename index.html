@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="CatFish" />
+<meta name="theme-color" content="#0F6E56" />
+<title>CatFish Manager</title>
+<link rel="manifest" href="manifest.json" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --green: #0F6E56; --green-dark: #085041; --green-light: #E1F5EE;
+    --red: #C0392B; --red-light: #FCEBEB;
+    --amber: #B8860B; --amber-light: #FAEEDA;
+    --blue: #185FA5; --blue-light: #E6F1FB;
+    --purple: #534AB7; --purple-light: #EEEDFE;
+    --gray: #5F5E5A; --gray-light: #F1EFE8;
+    --bg: #F5F7F5; --surface: #FFFFFF; --surface2: #F0F4F0;
+    --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.13);
+    --text: #1A1A18; --text2: #5A5A56; --text3: #9A9A94;
+    --radius: 14px; --radius-sm: 9px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; }
+
+  /* ── LOGIN ── */
+  #login-screen {
+    position: fixed; inset: 0; background: var(--green);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 1000; padding: 32px 24px;
+  }
+  #login-screen.hidden { display: none; }
+  .login-fish { font-size: 56px; margin-bottom: 8px; }
+  .login-title { font-size: 26px; font-weight: 600; color: #fff; letter-spacing: -0.5px; }
+  .login-sub { font-size: 14px; color: rgba(255,255,255,0.75); margin-top: 4px; margin-bottom: 36px; text-align: center; }
+  .login-card { background: #fff; border-radius: 20px; padding: 24px; width: 100%; max-width: 340px; }
+  .login-card h3 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+  .l-input { width: 100%; padding: 12px 14px; border-radius: var(--radius-sm); border: 1.5px solid var(--border2); font-size: 15px; font-family: 'DM Sans', sans-serif; color: var(--text); background: var(--bg); margin-bottom: 10px; }
+  .l-input:focus { outline: none; border-color: var(--green); }
+  .l-btn { width: 100%; padding: 13px; border-radius: var(--radius-sm); background: var(--green); color: #fff; border: none; font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-top: 4px; }
+  .l-btn:active { background: var(--green-dark); }
+  .l-error { font-size: 12px; color: var(--red); margin-top: 8px; text-align: center; min-height: 16px; }
+  .l-hint { font-size: 11px; color: var(--text3); text-align: center; margin-top: 10px; line-height: 1.5; }
+
+  /* ── APP SHELL ── */
+  #app { display: flex; flex-direction: column; height: 100%; }
+  #app.hidden { display: none; }
+
+  .topbar {
+    background: var(--green); color: #fff;
+    padding: 12px 16px 10px; display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0; position: relative;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 10px; }
+  .topbar-icon { font-size: 22px; }
+  .topbar-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+  .topbar-sub { font-size: 11px; opacity: 0.75; }
+  .topbar-user { font-size: 12px; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; cursor: pointer; }
+
+  .content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 72px; }
+
+  .nav {
+    display: flex; background: var(--surface); border-top: 1px solid var(--border);
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-btn {
+    flex: 1; padding: 9px 4px 7px; display: flex; flex-direction: column; align-items: center;
+    gap: 2px; cursor: pointer; border: none; background: none; color: var(--text3);
+    font-size: 10px; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: color 0.12s;
+  }
+  .nav-btn.active { color: var(--green); }
+  .nav-icon { font-size: 20px; line-height: 1; }
+
+  /* ── SCREENS ── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── CARDS ── */
+  .px { padding: 0 14px; }
+  .pt { padding-top: 14px; }
+  .pb { padding-bottom: 10px; }
+
+  .section-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; padding: 14px 14px 6px; }
+
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 14px 0; }
+  .metric-card { background: var(--surface); border-radius: var(--radius); padding: 13px 14px; border: 1px solid var(--border); }
+  .mc-label { font-size: 11px; color: var(--text3); font-weight: 500; margin-bottom: 5px; }
+  .mc-val { font-size: 21px; font-weight: 600; letter-spacing: -0.5px; line-height: 1; }
+  .mc-val.g { color: var(--green); }
+  .mc-val.r { color: var(--red); }
+  .mc-val.b { color: var(--blue); }
+  .mc-sub { font-size: 10px; color: var(--text3); margin-top: 3px; }
+
+  .card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); margin: 10px 14px 0; overflow: hidden; }
+  .card-hd { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-hd-title { font-size: 14px; font-weight: 600; }
+  .card-hd-sub { font-size: 11px; color: var(--text3); }
+
+  /* ── ENTRY ITEMS ── */
+  .entry-row { display: flex; align-items: center; gap: 11px; padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  .entry-row:last-child { border-bottom: none; }
+  .entry-ico { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .entry-info { flex: 1; min-width: 0; }
+  .entry-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .entry-meta { font-size: 11px; color: var(--text3); margin-top: 2px; display: flex; align-items: center; gap: 5px; }
+  .entry-amt { font-size: 15px; font-weight: 600; flex-shrink: 0; letter-spacing: -0.3px; }
+  .entry-amt.neg { color: var(--red); }
+  .entry-amt.pos { color: var(--green); }
+
+  .badge { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+
+  /* ── BAR CHART ── */
+  .bar-wrap { padding: 12px 14px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+  .bar-row:last-child { margin-bottom: 0; }
+  .bar-lbl { font-size: 12px; color: var(--text2); width: 78px; flex-shrink: 0; display: flex; align-items: center; gap: 4px; }
+  .bar-track { flex: 1; height: 9px; background: var(--surface2); border-radius: 5px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
+  .bar-val { font-size: 11px; color: var(--text3); width: 64px; text-align: right; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+
+  /* ── CAPITAL HERO ── */
+  .capital-hero {
+    margin: 12px 14px 0; border-radius: var(--radius); overflow: hidden;
+    background: var(--green); padding: 20px 18px 18px; color: #fff;
+  }
+  .ch-label { font-size: 12px; opacity: 0.8; font-weight: 500; }
+  .ch-amount { font-size: 32px; font-weight: 600; letter-spacing: -1px; margin: 4px 0 2px; }
+  .ch-date { font-size: 11px; opacity: 0.7; }
+  .ch-row { display: flex; margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 14px; }
+  .ch-item { flex: 1; text-align: center; }
+  .ch-item + .ch-item { border-left: 1px solid rgba(255,255,255,0.2); }
+  .ch-item-val { font-size: 16px; font-weight: 600; }
+  .ch-item-label { font-size: 10px; opacity: 0.75; margin-top: 2px; }
+
+  /* ── FILTER CHIPS ── */
+  .chips { display: flex; gap: 6px; padding: 10px 14px 0; overflow-x: auto; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { padding: 6px 13px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1px solid var(--border2); background: var(--surface); cursor: pointer; white-space: nowrap; font-family: 'DM Sans', sans-serif; color: var(--text2); transition: all 0.12s; flex-shrink: 0; }
+  .chip.active { background: var(--green); color: #fff; border-color: var(--green); }
+
+  /* ── RECEIPTS ── */
+  .receipts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 10px 14px 0; }
+  .receipt-card { background: var(--surface); border-radius: var(--radius-sm); border: 1px solid var(--border); overflow: hidden; cursor: pointer; }
+  .receipt-thumb { width: 100%; height: 82px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 30px; overflow: hidden; }
+  .receipt-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .receipt-info { padding: 7px 9px; }
+  .receipt-info-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .receipt-info-date { font-size: 10px; color: var(--text3); margin-top: 1px; }
+
+  /* ── FAB ── */
+  .fab {
+    position: fixed; bottom: 78px; right: 16px;
+    width: 54px; height: 54px; border-radius: 50%;
+    background: var(--green); color: #fff; font-size: 26px;
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 14px rgba(15,110,86,0.4); z-index: 49; transition: transform 0.12s;
+  }
+  .fab:active { transform: scale(0.93); }
+
+  /* ── MODAL ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: flex-end; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-sheet { background: var(--surface); border-radius: 22px 22px 0 0; width: 100%; max-width: 480px; padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); max-height: 93vh; overflow-y: auto; }
+  .modal-handle { width: 38px; height: 4px; background: var(--border2); border-radius: 2px; margin: 0 auto 14px; }
+  .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+
+  .fg { margin-bottom: 13px; }
+  .fg label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 5px; }
+  .fg input, .fg select, .fg textarea {
+    width: 100%; padding: 11px 13px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border2); background: var(--bg);
+    font-size: 15px; font-family: 'DM Sans', sans-serif; color: var(--text);
+  }
+  .fg input:focus, .fg select:focus { outline: none; border-color: var(--green); }
+  .fg select { appearance: none; }
+
+  .upload-box { border: 2px dashed var(--border2); border-radius: var(--radius-sm); padding: 18px; text-align: center; cursor: pointer; transition: border-color 0.15s; }
+  .upload-box:hover { border-color: var(--green); }
+  .upload-box-icon { font-size: 26px; margin-bottom: 4px; }
+  .upload-box-text { font-size: 12px; color: var(--text3); }
+  .upload-preview-img { width: 100%; max-height: 130px; object-fit: cover; border-radius: var(--radius-sm); margin-top: 8px; display: none; }
+
+  .btn-g { width: 100%; padding: 14px; border-radius: var(--radius-sm); background: var(--green); color: #fff; border: none; font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-top: 4px; }
+  .btn-g:active { background: var(--green-dark); }
+  .btn-ghost { width: 100%; padding: 12px; border-radius: var(--radius-sm); background: none; color: var(--text2); border: 1.5px solid var(--border2); font-size: 14px; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-top: 8px; }
+
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; padding: 36px 16px; color: var(--text3); font-size: 13px; }
+  .empty-icon { font-size: 38px; margin-bottom: 8px; }
+  .empty-text { font-weight: 500; color: var(--text2); margin-bottom: 4px; font-size: 14px; }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 88px; left: 50%; transform: translateX(-50%); background: #1A1A18; color: #fff; padding: 9px 20px; border-radius: 20px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; font-weight: 500; }
+  .toast.show { opacity: 1; }
+
+  /* ── SPINNER ── */
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── SYNC INDICATOR ── */
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.5); display: inline-block; margin-left: 6px; vertical-align: middle; }
+  .sync-dot.live { background: #5DCAA5; }
+
+  /* ── RECEIPT VIEWER ── */
+  #receipt-viewer-img { width: 100%; max-height: 320px; object-fit: contain; border-radius: var(--radius-sm); }
+
+  /* ── DELETE BTN ── */
+  .del-btn { background: none; border: none; font-size: 17px; cursor: pointer; opacity: 0.4; padding: 4px; flex-shrink: 0; }
+  .del-btn:active { opacity: 0.8; }
+
+  /* SETUP SCREEN */
+  #setup-screen { position: fixed; inset: 0; background: var(--bg); z-index: 900; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 32px 20px; }
+  #setup-screen.hidden { display: none; }
+  .setup-step { background: var(--surface); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; border: 1px solid var(--border); width: 100%; max-width: 440px; }
+  .setup-step-num { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--green); color: #fff; font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+  .setup-step h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .setup-step p { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 8px; }
+  .code-box { background: #1A1A18; color: #5DCAA5; font-family: 'DM Mono', monospace; font-size: 12px; padding: 12px; border-radius: var(--radius-sm); word-break: break-all; line-height: 1.6; margin: 8px 0; }
+  .setup-btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm); background: var(--green); color: #fff; font-size: 13px; font-weight: 600; text-decoration: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  .setup-title { font-size: 22px; font-weight: 600; letter-spacing: -0.4px; margin-bottom: 4px; color: var(--text); }
+  .setup-sub { font-size: 13px; color: var(--text3); margin-bottom: 24px; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ LOGIN SCREEN ══════════ -->
+<div id="login-screen">
+  <div class="login-fish">🐟</div>
+  <div class="login-title">CatFish Manager</div>
+  <div class="login-sub">Family business tracker<br>Sign in to sync with your family</div>
+  <div class="login-card">
+    <h3>Sign in to your family account</h3>
+    <input class="l-input" id="login-email" type="email" placeholder="Email address" autocomplete="email" />
+    <input class="l-input" id="login-password" type="password" placeholder="Password" autocomplete="current-password" />
+    <button class="l-btn" id="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="l-error" id="login-error"></div>
+    <div class="l-hint">Only family members with an approved account can sign in.<br>Ask the family admin to add your email.</div>
+  </div>
+</div>
+
+<!-- ══════════ APP SHELL ══════════ -->
+<div id="app" class="hidden">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-icon">🐟</span>
+      <div>
+        <div class="topbar-title">CatFish Manager <span class="sync-dot" id="sync-dot"></span></div>
+        <div class="topbar-sub" id="topbar-sub">Family business tracker</div>
+      </div>
+    </div>
+    <span class="topbar-user" id="user-label" onclick="doLogout()">Sign out</span>
+  </div>
+
+  <div class="content">
+    <!-- DASHBOARD -->
+    <div id="screen-dashboard" class="screen active">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="mc-label">Net Profit</div>
+          <div class="mc-val g" id="d-profit">₱0</div>
+          <div class="mc-sub">all time</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Total Expenses</div>
+          <div class="mc-val r" id="d-expenses">₱0</div>
+          <div class="mc-sub">all time</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Capital Added</div>
+          <div class="mc-val b" id="d-capital">₱0</div>
+          <div class="mc-sub">all time</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Entries</div>
+          <div class="mc-val" id="d-entries">0</div>
+          <div class="mc-sub">total records</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-hd-title">Expense by category</span>
+          <span class="card-hd-sub" id="dash-month"></span>
+        </div>
+        <div id="expense-bars"><div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No data yet</div></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><span class="card-hd-title">Recent entries</span></div>
+        <div id="recent-list"><div class="empty"><div class="empty-icon">📝</div><div class="empty-text">No entries yet</div>Tap + to add your first entry</div></div>
+      </div>
+    </div>
+
+    <!-- EXPENSES -->
+    <div id="screen-expenses" class="screen">
+      <div class="chips" id="cat-chips">
+        <button class="chip active" data-cat="all">All</button>
+        <button class="chip" data-cat="feeds">🌾 Feeds</button>
+        <button class="chip" data-cat="electricity">⚡ Electricity</button>
+        <button class="chip" data-cat="labor">👷 Labor</button>
+        <button class="chip" data-cat="transport">🚚 Transport</button>
+        <button class="chip" data-cat="medicine">💊 Medicine</button>
+        <button class="chip" data-cat="water">💧 Water</button>
+        <button class="chip" data-cat="other">📦 Other</button>
+      </div>
+      <div class="card" style="margin-top:10px;">
+        <div id="expense-list"><div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No expenses yet</div>Tap + to log an expense</div></div>
+      </div>
+    </div>
+
+    <!-- CAPITAL -->
+    <div id="screen-capital" class="screen">
+      <div class="capital-hero">
+        <div class="ch-label">Current Standing</div>
+        <div class="ch-amount" id="cap-total">₱0.00</div>
+        <div class="ch-date" id="cap-date">—</div>
+        <div class="ch-row">
+          <div class="ch-item"><div class="ch-item-val" id="cap-income">₱0</div><div class="ch-item-label">Total income</div></div>
+          <div class="ch-item"><div class="ch-item-val" id="cap-spent">₱0</div><div class="ch-item-label">Total spent</div></div>
+          <div class="ch-item"><div class="ch-item-val" id="cap-net">₱0</div><div class="ch-item-label">Net profit</div></div>
+        </div>
+      </div>
+      <div class="section-label">Capital &amp; income records</div>
+      <div class="card">
+        <div id="capital-list"><div class="empty"><div class="empty-icon">💰</div><div class="empty-text">No capital entries yet</div></div></div>
+      </div>
+    </div>
+
+    <!-- RECEIPTS -->
+    <div id="screen-receipts" class="screen">
+      <div class="section-label">Receipts &amp; bills</div>
+      <div class="receipts-grid" id="receipts-grid">
+        <div style="grid-column:1/-1" class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No receipts yet</div>Attach a photo when adding an entry</div>
+      </div>
+    </div>
+  </div><!-- /content -->
+
+  <nav class="nav">
+    <button class="nav-btn active" data-s="dashboard"><span class="nav-icon">🏠</span>Dashboard</button>
+    <button class="nav-btn" data-s="expenses"><span class="nav-icon">💸</span>Expenses</button>
+    <button class="nav-btn" data-s="capital"><span class="nav-icon">💰</span>Capital</button>
+    <button class="nav-btn" data-s="receipts"><span class="nav-icon">🧾</span>Receipts</button>
+  </nav>
+</div><!-- /app -->
+
+<button class="fab" id="fab">+</button>
+
+<!-- ══════════ ADD ENTRY MODAL ══════════ -->
+<div class="modal-overlay" id="modal-entry">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add new entry</div>
+    <div class="fg">
+      <label>Entry type</label>
+      <select id="e-type" onchange="onTypeChange()">
+        <option value="expense">💸 Expense (money paid out)</option>
+        <option value="income">💵 Income / Sales</option>
+        <option value="capital">🏦 Capital added</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>Description</label>
+      <input id="e-desc" placeholder="e.g. Monthly electricity bill" />
+    </div>
+    <div class="fg" id="cat-fg">
+      <label>Category</label>
+      <select id="e-cat">
+        <option value="feeds">🌾 Feeds</option>
+        <option value="electricity">⚡ Electricity</option>
+        <option value="labor">👷 Labor / Wages</option>
+        <option value="transport">🚚 Transport</option>
+        <option value="medicine">💊 Medicine / Chemicals</option>
+        <option value="water">💧 Water</option>
+        <option value="other">📦 Other</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>Amount (₱)</label>
+      <input id="e-amount" type="number" placeholder="0.00" min="0" step="0.01" />
+    </div>
+    <div class="fg">
+      <label>Date</label>
+      <input id="e-date" type="date" />
+    </div>
+    <div class="fg">
+      <label>Notes (optional)</label>
+      <input id="e-notes" placeholder="Any additional notes..." />
+    </div>
+    <div class="fg">
+      <label>Attach receipt / bill photo (optional)</label>
+      <div class="upload-box" onclick="document.getElementById('file-inp').click()">
+        <div class="upload-box-icon">📎</div>
+        <div class="upload-box-text">Tap to take photo or choose file</div>
+      </div>
+      <input type="file" id="file-inp" accept="image/*" capture="environment" style="display:none" onchange="onFilePick(event)" />
+      <img id="e-preview" class="upload-preview-img" />
+      <div id="e-fname" style="font-size:11px;color:var(--text3);margin-top:4px;"></div>
+    </div>
+    <button class="btn-g" id="save-btn" onclick="saveEntry()">Save entry</button>
+    <button class="btn-ghost" onclick="closeEntry()">Cancel</button>
+  </div>
+</div>
+
+<!-- RECEIPT VIEWER MODAL -->
+<div class="modal-overlay" id="modal-receipt">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="rv-title">Receipt</div>
+    <img id="receipt-viewer-img" style="display:none;" />
+    <div id="rv-info" style="font-size:13px;color:var(--text2);line-height:2;margin-top:10px;"></div>
+    <button class="btn-ghost" onclick="document.getElementById('modal-receipt').classList.remove('open')">Close</button>
+  </div>
+</div>
+
+<!-- FIREBASE CONFIG MODAL -->
+<div class="modal-overlay" id="modal-config">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔧 Firebase Setup Needed</div>
+    <p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:14px;">
+      Paste your Firebase project credentials below. You only need to do this once — then share the configured file with your family. See the setup guide inside the app for instructions.
+    </p>
+    <div class="fg"><label>API Key</label><input id="cfg-apikey" placeholder="AIza..." /></div>
+    <div class="fg"><label>Auth Domain</label><input id="cfg-authdomain" placeholder="yourproject.firebaseapp.com" /></div>
+    <div class="fg"><label>Project ID</label><input id="cfg-projectid" placeholder="your-project-id" /></div>
+    <div class="fg"><label>Storage Bucket</label><input id="cfg-bucket" placeholder="yourproject.appspot.com" /></div>
+    <div class="fg"><label>App ID</label><input id="cfg-appid" placeholder="1:123456789:web:abc..." /></div>
+    <button class="btn-g" onclick="saveConfig()">Save & Connect</button>
+    <button class="btn-ghost" onclick="document.getElementById('modal-config').classList.remove('open')">Cancel</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══════════ FIREBASE SDK ══════════ -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp, query, orderBy }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ── CONFIG (fill in after Firebase setup) ──
+// You will paste your own values here. Replace everything in the object below.
+const firebaseConfig = {
+  apiKey: "AIzaSyBWCx4Xpw3ZkSSVjE7c8WCOvitssWunufQ",
+  authDomain: "catfish-business.firebaseapp.com",
+  projectId: "catfish-business",
+  storageBucket: "catfish-business.firebasestorage.app",
+  appId: "1:1019229341744:web:ae112945e73866a2e805f5"
+};
+
+const isConfigured = !FIREBASE_CONFIG.apiKey.includes('PASTE');
+
+let app, auth, db;
+let entries = [];
+let pendingFile = null;
+
+function fmt(n) {
+  const num = Number(n) || 0;
+  return '₱' + num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtShort(n) {
+  const num = Number(n) || 0;
+  if (Math.abs(num) >= 1000000) return '₱' + (num / 1000000).toFixed(1) + 'M';
+  if (Math.abs(num) >= 1000) return '₱' + (num / 1000).toFixed(1) + 'k';
+  return fmt(num);
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+const CAT = {
+  feeds:       { bg: '#E1F5EE', bar: '#1D9E75', icon: '🌾', label: 'Feeds', badge: '#9FE1CB', btxt: '#085041' },
+  electricity: { bg: '#FAEEDA', bar: '#EF9F27', icon: '⚡', label: 'Electricity', badge: '#FAC775', btxt: '#633806' },
+  labor:       { bg: '#EEEDFE', bar: '#7F77DD', icon: '👷', label: 'Labor', badge: '#CECBF6', btxt: '#26215C' },
+  transport:   { bg: '#E6F1FB', bar: '#378ADD', icon: '🚚', label: 'Transport', badge: '#B5D4F4', btxt: '#042C53' },
+  medicine:    { bg: '#FCEBEB', bar: '#E24B4A', icon: '💊', label: 'Medicine', badge: '#F7C1C1', btxt: '#501313' },
+  water:       { bg: '#E6F1FB', bar: '#185FA5', icon: '💧', label: 'Water', badge: '#85B7EB', btxt: '#042C53' },
+  other:       { bg: '#F1EFE8', bar: '#888780', icon: '📦', label: 'Other', badge: '#D3D1C7', btxt: '#2C2C2A' },
+  income:      { bg: '#EAF3DE', bar: '#639922', icon: '💵', label: 'Income', badge: '#C0DD97', btxt: '#173404' },
+  capital:     { bg: '#E1F5EE', bar: '#085041', icon: '🏦', label: 'Capital', badge: '#5DCAA5', btxt: '#04342C' },
+};
+
+function getInfo(entry) {
+  if (entry.type === 'income') return CAT.income;
+  if (entry.type === 'capital') return CAT.capital;
+  return CAT[entry.category] || CAT.other;
+}
+
+function showToast(msg, dur = 2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function render() {
+  const totalExpenses = entries.filter(e => e.type === 'expense').reduce((s, e) => s + Number(e.amount), 0);
+  const totalIncome   = entries.filter(e => e.type === 'income').reduce((s, e) => s + Number(e.amount), 0);
+  const totalCapital  = entries.filter(e => e.type === 'capital').reduce((s, e) => s + Number(e.amount), 0);
+  const netProfit = totalIncome - totalExpenses;
+
+  document.getElementById('d-profit').textContent = fmtShort(netProfit);
+  document.getElementById('d-expenses').textContent = fmtShort(totalExpenses);
+  document.getElementById('d-capital').textContent = fmtShort(totalCapital);
+  document.getElementById('d-entries').textContent = entries.length;
+  document.getElementById('dash-month').textContent = new Date().toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+
+  document.getElementById('cap-total').textContent = fmt(totalCapital + netProfit);
+  document.getElementById('cap-date').textContent = 'Updated: ' + new Date().toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+  document.getElementById('cap-income').textContent = fmtShort(totalIncome);
+  document.getElementById('cap-spent').textContent = fmtShort(totalExpenses);
+  document.getElementById('cap-net').textContent = fmtShort(netProfit);
+
+  renderBars();
+  renderRecent();
+  renderExpenses();
+  renderCapital();
+  renderReceipts();
+}
+
+function renderBars() {
+  const cats = ['feeds','electricity','labor','transport','medicine','water','other'];
+  const totals = {};
+  cats.forEach(c => totals[c] = 0);
+  entries.filter(e => e.type === 'expense').forEach(e => {
+    const k = e.category && totals[e.category] !== undefined ? e.category : 'other';
+    totals[k] += Number(e.amount);
+  });
+  const max = Math.max(...Object.values(totals), 1);
+  const active = cats.filter(c => totals[c] > 0);
+  const el = document.getElementById('expense-bars');
+  if (!active.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No expense data yet</div></div>'; return; }
+  el.innerHTML = '<div class="bar-wrap">' + active.map(c => {
+    const info = CAT[c];
+    const pct = (totals[c] / max * 100).toFixed(1);
+    return `<div class="bar-row">
+      <div class="bar-lbl">${info.icon} ${info.label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${info.bar}"></div></div>
+      <div class="bar-val">${fmtShort(totals[c])}</div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function entryHTML(e, showDel = false) {
+  const info = getInfo(e);
+  const isExp = e.type === 'expense';
+  const label = info.label;
+  const del = showDel ? `<button class="del-btn" onclick="deleteEntry('${e.id}')">🗑</button>` : '';
+  const rcpt = e.receipt ? ' 📎' : '';
+  return `<div class="entry-row">
+    <div class="entry-ico" style="background:${info.bg}">${info.icon}</div>
+    <div class="entry-info" onclick="${e.receipt ? `viewReceipt('${e.id}')` : ''}">
+      <div class="entry-name">${escHtml(e.description || label)}${rcpt}</div>
+      <div class="entry-meta">
+        ${fmtDate(e.date)}
+        <span class="badge" style="background:${info.badge};color:${info.btxt}">${label}</span>
+        ${e.notes ? `<span style="color:var(--text3)">${escHtml(e.notes)}</span>` : ''}
+      </div>
+    </div>
+    <div class="entry-amt ${isExp ? 'neg' : 'pos'}">${isExp ? '−' : '+'} ${fmt(e.amount)}</div>
+    ${del}
+  </div>`;
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderRecent() {
+  const el = document.getElementById('recent-list');
+  const recent = [...entries].sort((a,b) => (b.date||'').localeCompare(a.date||'')).slice(0,6);
+  el.innerHTML = recent.length ? recent.map(e => entryHTML(e)).join('') :
+    '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">No entries yet</div>Tap + to add your first entry</div>';
+}
+
+function renderExpenses() {
+  const el = document.getElementById('expense-list');
+  const active = document.querySelector('#cat-chips .chip.active')?.dataset.cat || 'all';
+  let list = entries.filter(e => e.type === 'expense');
+  if (active !== 'all') list = list.filter(e => e.category === active);
+  list = list.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  el.innerHTML = list.length ? list.map(e => entryHTML(e, true)).join('') :
+    '<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No expenses found</div></div>';
+}
+
+function renderCapital() {
+  const el = document.getElementById('capital-list');
+  const list = entries.filter(e => e.type === 'capital' || e.type === 'income').sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  el.innerHTML = list.length ? list.map(e => entryHTML(e, true)).join('') :
+    '<div class="empty"><div class="empty-icon">💰</div><div class="empty-text">No capital entries yet</div></div>';
+}
+
+function renderReceipts() {
+  const el = document.getElementById('receipts-grid');
+  const withR = entries.filter(e => e.receipt).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  if (!withR.length) { el.innerHTML = '<div style="grid-column:1/-1" class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No receipts yet</div>Attach a photo when adding an entry</div>'; return; }
+  el.innerHTML = withR.map(e => `
+    <div class="receipt-card" onclick="viewReceipt('${e.id}')">
+      <div class="receipt-thumb">${e.receipt.startsWith('data:image') ? `<img src="${e.receipt}" />` : '📄'}</div>
+      <div class="receipt-info"><div class="receipt-info-name">${escHtml(e.description||'Receipt')}</div><div class="receipt-info-date">${fmtDate(e.date)}</div></div>
+    </div>`).join('');
+}
+
+window.viewReceipt = function(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('rv-title').textContent = e.description || 'Receipt';
+  const img = document.getElementById('receipt-viewer-img');
+  img.style.display = e.receipt && e.receipt.startsWith('data:image') ? 'block' : 'none';
+  if (img.style.display === 'block') img.src = e.receipt;
+  const info = getInfo(e);
+  document.getElementById('rv-info').innerHTML =
+    `<b>Amount:</b> ${fmt(e.amount)}<br><b>Date:</b> ${fmtDate(e.date)}<br><b>Type:</b> ${info.label}${e.notes ? '<br><b>Notes:</b> ' + escHtml(e.notes) : ''}`;
+  document.getElementById('modal-receipt').classList.add('open');
+};
+
+window.deleteEntry = async function(id) {
+  if (!confirm('Delete this entry?')) return;
+  try { await deleteDoc(doc(db, 'entries', id)); showToast('Entry deleted'); }
+  catch(err) { showToast('Error: ' + err.message); }
+};
+
+// Nav
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('screen-' + btn.dataset.s).classList.add('active');
+  });
+});
+
+// Filter chips
+document.getElementById('cat-chips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  document.querySelectorAll('#cat-chips .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  renderExpenses();
+});
+
+// FAB
+document.getElementById('fab').addEventListener('click', () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('e-date').value = today;
+  document.getElementById('e-desc').value = '';
+  document.getElementById('e-amount').value = '';
+  document.getElementById('e-notes').value = '';
+  document.getElementById('e-preview').style.display = 'none';
+  document.getElementById('e-fname').textContent = '';
+  document.getElementById('file-inp').value = '';
+  pendingFile = null;
+  window.onTypeChange();
+  document.getElementById('modal-entry').classList.add('open');
+});
+
+window.onTypeChange = function() {
+  document.getElementById('cat-fg').style.display =
+    document.getElementById('e-type').value === 'expense' ? 'block' : 'none';
+};
+
+window.closeEntry = function() { document.getElementById('modal-entry').classList.remove('open'); };
+
+window.onFilePick = function(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  document.getElementById('e-fname').textContent = file.name;
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = ev2 => {
+      pendingFile = ev2.target.result;
+      const img = document.getElementById('e-preview');
+      img.src = pendingFile; img.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+window.saveEntry = async function() {
+  const type = document.getElementById('e-type').value;
+  const desc = document.getElementById('e-desc').value.trim();
+  const amount = parseFloat(document.getElementById('e-amount').value);
+  const date = document.getElementById('e-date').value;
+  const cat = document.getElementById('e-cat').value;
+  const notes = document.getElementById('e-notes').value.trim();
+
+  if (!desc) { showToast('Please enter a description'); return; }
+  if (!amount || amount <= 0) { showToast('Please enter a valid amount'); return; }
+  if (!date) { showToast('Please choose a date'); return; }
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    await addDoc(collection(db, 'entries'), {
+      type, description: desc, amount, date,
+      category: type === 'expense' ? cat : null,
+      notes: notes || null,
+      receipt: pendingFile || null,
+      createdAt: serverTimestamp(),
+      createdBy: auth.currentUser?.email || 'unknown'
+    });
+    pendingFile = null;
+    window.closeEntry();
+    showToast('✓ Entry saved and synced!');
+  } catch(err) {
+    showToast('Error: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save entry';
+  }
+};
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+});
+
+// LOGIN
+window.doLogin = async function() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
+  err.textContent = '';
+  if (!email || !pw) { err.textContent = 'Please enter email and password.'; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    await signInWithEmailAndPassword(auth, email, pw);
+  } catch(e) {
+    err.textContent = e.code === 'auth/invalid-credential' ? 'Wrong email or password.' :
+      e.code === 'auth/too-many-requests' ? 'Too many attempts. Try again later.' : e.message;
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+};
+
+window.doLogout = async function() {
+  if (!confirm('Sign out?')) return;
+  await signOut(auth);
+};
+
+// ── INIT ──
+if (!isConfigured) {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('modal-config').classList.add('open');
+  document.getElementById('fab').style.display = 'none';
+  showToast('⚠️ Firebase config needed — see setup guide', 4000);
+} else {
+  try {
+    app = initializeApp(FIREBASE_CONFIG);
+    auth = getAuth(app);
+    db = getFirestore(app);
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        document.getElementById('fab').style.display = 'flex';
+        document.getElementById('user-label').textContent = user.email.split('@')[0];
+
+        // Real-time listener
+        const q = query(collection(db, 'entries'), orderBy('date', 'desc'));
+        onSnapshot(q, snap => {
+          entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          document.getElementById('sync-dot').classList.add('live');
+          render();
+        }, err => {
+          document.getElementById('sync-dot').classList.remove('live');
+          showToast('Sync error: ' + err.message, 4000);
+        });
+      } else {
+        document.getElementById('login-screen').classList.remove('hidden');
+        document.getElementById('app').classList.add('hidden');
+        document.getElementById('fab').style.display = 'none';
+        entries = [];
+      }
+    });
+  } catch(err) {
+    showToast('Firebase init error: ' + err.message, 5000);
+  }
+}
+
+// Allow pressing Enter on login
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') window.doLogin();
+});
+</script>
+</body>
+</html>
