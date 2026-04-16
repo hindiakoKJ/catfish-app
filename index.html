@@ -438,17 +438,33 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- ══════════ FIREBASE SDK ══════════ -->
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
-  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp, query, orderBy }
-  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+<!-- ══════════ FIREBASE SDK (compat — works with onclick) ══════════ -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+// Shim so the rest of the code below works unchanged
+const initializeApp = (cfg) => firebase.initializeApp(cfg);
+const getAuth = (app) => app.auth();
+const getFirestore = (app) => app.firestore();
+const signInWithEmailAndPassword = (auth, email, pw) => auth.signInWithEmailAndPassword(email, pw);
+const signOut = (auth) => auth.signOut();
+const onAuthStateChanged = (auth, cb) => auth.onAuthStateChanged(cb);
+const collection = (db, name) => db.collection(name);
+const addDoc = (col, data) => col.add(data);
+const deleteDoc = (ref) => ref.delete();
+const doc = (db, col, id) => db.collection(col).doc(id);
+const serverTimestamp = () => firebase.firestore.FieldValue.serverTimestamp();
+const query = (col, ...constraints) => { let q = col; constraints.forEach(c => { q = c(q); }); return q; };
+const orderBy = (field, dir = 'desc') => (q) => q.orderBy(field, dir);
+const onSnapshot = (q, success, error) => q.onSnapshot({ next: success, error: error });
+</script>
+<script>
+// ──────────────────────────────────────────────
 
 // ── CONFIG (fill in after Firebase setup) ──
 // You will paste your own values here. Replace everything in the object below.
-const firebaseConfig = {
+const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBWCx4Xpw3ZkSSVjE7c8WCOvitssWunufQ",
   authDomain: "catfish-business.firebaseapp.com",
   projectId: "catfish-business",
@@ -794,6 +810,7 @@ if (!isConfigured) {
 document.getElementById('login-password').addEventListener('keydown', e => {
   if (e.key === 'Enter') window.doLogin();
 });
+// ──────────────────────────────────────────────
 </script>
 </body>
 </html>
