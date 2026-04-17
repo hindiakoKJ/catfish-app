@@ -444,25 +444,43 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
 // Shim so the rest of the code below works unchanged
 const initializeApp = (cfg) => firebase.initializeApp(cfg);
 const getAuth = (app) => app.auth();
 const getFirestore = (app) => app.firestore();
-const signInWithEmailAndPassword = (auth, email, pw) => auth.signInWithEmailAndPassword(email, pw);
+
+const signInWithEmailAndPassword = (auth, email, pw) =>
+  auth.signInWithEmailAndPassword(email, pw);
+
 const signOut = (auth) => auth.signOut();
 const onAuthStateChanged = (auth, cb) => auth.onAuthStateChanged(cb);
+
 const collection = (db, name) => db.collection(name);
 const addDoc = (col, data) => col.add(data);
 const deleteDoc = (ref) => ref.delete();
 const doc = (db, col, id) => db.collection(col).doc(id);
-const serverTimestamp = () => firebase.firestore.FieldValue.serverTimestamp();
-const query = (col, ...constraints) => { let q = col; constraints.forEach(c => { q = c(q); }); return q; };
+
+const serverTimestamp = () =>
+  firebase.firestore.FieldValue.serverTimestamp();
+
+const query = (col, ...constraints) => {
+  let q = col;
+  constraints.forEach(c => { q = c(q); });
+  return q;
+};
+
 const orderBy = (field, dir = 'desc') => (q) => q.orderBy(field, dir);
-const onSnapshot = (q, success, error) => q.onSnapshot({ next: success, error: error });
+
+const onSnapshot = (q, success, error) =>
+  q.onSnapshot({ next: success, error: error });
+
+// ✅ STORAGE SHIMS (added earlier)
 const getStorage = (app) => app.storage();
 const ref = (storage, path) => storage.ref(path);
 const uploadBytes = (ref, blob) => ref.put(blob);
 const getDownloadURL = (ref) => ref.getDownloadURL();
+
 </script>
 <script>
 // ──────────────────────────────────────────────
