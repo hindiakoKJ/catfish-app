@@ -1,353 +1,293 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-title" content="CatFish"/>
-<meta name="theme-color" content="#0F6E56"/>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="CatFish" />
+<meta name="theme-color" content="#0F6E56" />
 <title>CatFish Manager</title>
-<link rel="manifest" href="manifest.json"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="manifest" href="manifest.json" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
-:root{--g:#0F6E56;--gd:#085041;--r:#C0392B;--am:#B8860B;--bl:#185FA5;--pu:#534AB7;
---bg:#F5F7F5;--sf:#fff;--sf2:#F0F4F0;--bd:rgba(0,0,0,.08);--bd2:rgba(0,0,0,.13);
---t:#1A1A18;--t2:#5A5A56;--t3:#9A9A94;--ra:14px;--rs:9px;}
+:root{--green:#0F6E56;--green-dark:#085041;--red:#C0392B;--amber:#B8860B;--blue:#185FA5;--bg:#F5F7F5;--surface:#FFFFFF;--surface2:#F0F4F0;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.13);--text:#1A1A18;--text2:#5A5A56;--text3:#9A9A94;--radius:14px;--radius-sm:9px;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t);font-size:15px;}
-
-/* ── LOGIN ── */
-#login-screen{position:fixed;inset:0;background:var(--g);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;padding:32px 20px;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:15px;}
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:var(--green);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;padding:32px 24px;}
 #login-screen.hidden{display:none;}
-.lfish{font-size:52px;margin-bottom:6px;}
-.ltitle{font-size:24px;font-weight:600;color:#fff;letter-spacing:-.5px;}
-.lsub{font-size:13px;color:rgba(255,255,255,.75);margin:4px 0 28px;text-align:center;}
-.lcard{background:#fff;border-radius:20px;padding:22px;width:100%;max-width:340px;}
-.lcard h3{font-size:14px;font-weight:600;margin-bottom:14px;}
-.linp{width:100%;padding:11px 13px;border-radius:var(--rs);border:1.5px solid var(--bd2);font-size:15px;font-family:'DM Sans',sans-serif;color:var(--t);background:var(--bg);margin-bottom:9px;}
-.linp:focus{outline:none;border-color:var(--g);}
-.lbtn{width:100%;padding:13px;border-radius:var(--rs);background:var(--g);color:#fff;border:none;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:4px;}
-.lbtn:active{background:var(--gd);}
-.lerr{font-size:12px;color:var(--r);margin-top:7px;text-align:center;min-height:16px;}
-.lhint{font-size:11px;color:var(--t3);text-align:center;margin-top:9px;line-height:1.5;}
-
-/* ── CLOCK IN/OUT SCREEN (staff/manager first screen) ── */
-#clock-screen{position:fixed;inset:0;background:var(--g);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:900;padding:24px;}
-#clock-screen.open{display:flex;}
-.clk-avatar{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff;margin-bottom:12px;}
-.clk-name{font-size:22px;font-weight:600;color:#fff;margin-bottom:4px;}
-.clk-role{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:6px;}
-.clk-time{font-size:42px;font-weight:600;color:#fff;font-family:'DM Mono',sans-serif;letter-spacing:-1px;margin:16px 0 4px;}
-.clk-date{font-size:14px;color:rgba(255,255,255,.8);margin-bottom:28px;}
-.clk-status-box{background:rgba(255,255,255,.15);border-radius:14px;padding:14px 20px;margin-bottom:24px;text-align:center;width:100%;max-width:320px;}
-.clk-status-label{font-size:12px;color:rgba(255,255,255,.75);margin-bottom:4px;}
-.clk-status-val{font-size:16px;font-weight:600;color:#fff;}
-.clk-btn{width:100%;max-width:320px;padding:16px;border-radius:16px;font-size:17px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border:none;margin-bottom:10px;}
-.clk-btn.in{background:#fff;color:var(--g);}
-.clk-btn.out{background:rgba(255,255,255,.2);color:#fff;border:2px solid rgba(255,255,255,.5);}
-.clk-btn.disabled{opacity:.4;pointer-events:none;}
-.clk-skip{font-size:13px;color:rgba(255,255,255,.6);cursor:pointer;text-decoration:underline;margin-top:8px;}
-
-/* ── APP SHELL ── */
+.lf{font-size:56px;margin-bottom:8px;}
+.lt{font-size:26px;font-weight:600;color:#fff;letter-spacing:-.5px;}
+.ls{font-size:14px;color:rgba(255,255,255,.75);margin-top:4px;margin-bottom:36px;text-align:center;}
+.lc{background:#fff;border-radius:20px;padding:24px;width:100%;max-width:340px;}
+.lc h3{font-size:15px;font-weight:600;color:var(--text);margin-bottom:16px;}
+.li{width:100%;padding:12px 14px;border-radius:var(--radius-sm);border:1.5px solid var(--border2);font-size:15px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--bg);margin-bottom:10px;}
+.li:focus{outline:none;border-color:var(--green);}
+.lb{width:100%;padding:13px;border-radius:var(--radius-sm);background:var(--green);color:#fff;border:none;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:4px;}
+.lb:active{background:var(--green-dark);}
+.le{font-size:12px;color:var(--red);margin-top:8px;text-align:center;min-height:16px;}
+.lh{font-size:11px;color:var(--text3);text-align:center;margin-top:10px;line-height:1.5;}
+/* SHELL */
 #app{display:flex;flex-direction:column;height:100%;}
 #app.hidden{display:none;}
-.topbar{background:var(--g);color:#fff;padding:12px 16px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.tb-left{display:flex;align-items:center;gap:9px;}
-.tb-icon{font-size:22px;}
-.tb-title{font-size:17px;font-weight:600;letter-spacing:-.3px;}
-.tb-sub{font-size:11px;opacity:.75;}
-.tb-right{display:flex;align-items:center;gap:8px;}
-.tb-user{font-size:12px;background:rgba(255,255,255,.2);padding:4px 10px;border-radius:20px;cursor:pointer;}
-.tb-alerts{position:relative;cursor:pointer;}
-.alert-badge{position:absolute;top:-4px;right:-4px;background:var(--r);color:#fff;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.topbar{background:var(--green);color:#fff;padding:12px 16px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.tl{display:flex;align-items:center;gap:10px;}
+.ti{font-size:22px;}
+.tt{font-size:17px;font-weight:600;letter-spacing:-.3px;}
+.ts{font-size:11px;opacity:.75;}
+.tu{font-size:12px;background:rgba(255,255,255,.2);padding:4px 10px;border-radius:20px;cursor:pointer;}
 .content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:72px;}
-.nav{display:flex;background:var(--sf);border-top:1px solid var(--bd);position:fixed;bottom:0;left:0;right:0;z-index:50;padding-bottom:env(safe-area-inset-bottom);}
-.nb{flex:1;padding:9px 2px 7px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;border:none;background:none;color:var(--t3);font-size:9px;font-family:'DM Sans',sans-serif;font-weight:500;transition:color .12s;}
-.nb.active{color:var(--g);}
+.nav{display:flex;background:var(--surface);border-top:1px solid var(--border);position:fixed;bottom:0;left:0;right:0;z-index:50;padding-bottom:env(safe-area-inset-bottom);}
+.nb{flex:1;padding:9px 2px 7px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;border:none;background:none;color:var(--text3);font-size:9px;font-family:'DM Sans',sans-serif;font-weight:500;transition:color .12s;}
+.nb.active{color:var(--green);}
 .ni{font-size:18px;line-height:1;}
-.screen{display:none;}.screen.active{display:block;}
-
-/* ── ROLE BANNER ── */
-.role-banner{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;font-weight:600;}
-.role-badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
-.rb-owner{background:#E1F5EE;color:#085041;}
-.rb-manager{background:#E6F1FB;color:#042C53;}
-.rb-staff{background:#EEEDFE;color:#26215C;}
-
-/* ── CARDS / LAYOUT ── */
-.sl{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;padding:14px 14px 6px;}
+.screen{display:none;}
+.screen.active{display:block;}
+/* LAYOUT */
+.sl{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;padding:14px 14px 6px;}
 .mg{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 14px 0;}
-.mc{background:var(--sf);border-radius:var(--ra);padding:13px 14px;border:1px solid var(--bd);}
-.mcl{font-size:11px;color:var(--t3);font-weight:500;margin-bottom:5px;}
+.mc{background:var(--surface);border-radius:var(--radius);padding:13px 14px;border:1px solid var(--border);}
+.mcl{font-size:11px;color:var(--text3);font-weight:500;margin-bottom:5px;}
 .mcv{font-size:20px;font-weight:600;letter-spacing:-.5px;line-height:1;}
-.mcv.g{color:var(--g);}.mcv.r{color:var(--r);}.mcv.b{color:var(--bl);}
-.mcs{font-size:10px;color:var(--t3);margin-top:3px;}
-.card{background:var(--sf);border-radius:var(--ra);border:1px solid var(--bd);margin:10px 14px 0;overflow:hidden;}
-.ch{padding:12px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;}
+.mcv.g{color:var(--green);}.mcv.r{color:var(--red);}.mcv.b{color:var(--blue);}
+.mcs{font-size:10px;color:var(--text3);margin-top:3px;}
+.card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);margin:10px 14px 0;overflow:hidden;}
+.ch{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .cht{font-size:14px;font-weight:600;}
-.chs{font-size:11px;color:var(--t3);}
-.chb{font-size:12px;color:var(--g);font-weight:600;cursor:pointer;background:none;border:none;font-family:'DM Sans',sans-serif;padding:0;}
-/* entries */
-.er{display:flex;align-items:center;gap:11px;padding:11px 14px;border-bottom:1px solid var(--bd);}
+.chs{font-size:11px;color:var(--text3);}
+.chb{font-size:12px;color:var(--green);font-weight:600;cursor:pointer;background:none;border:none;font-family:'DM Sans',sans-serif;padding:0;}
+/* ENTRIES */
+.er{display:flex;align-items:center;gap:11px;padding:11px 14px;border-bottom:1px solid var(--border);}
 .er:last-child{border-bottom:none;}
 .ei{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
 .en{flex:1;min-width:0;}
 .ena{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.em{font-size:11px;color:var(--t3);margin-top:2px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.em{font-size:11px;color:var(--text3);margin-top:2px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
 .ea{font-size:15px;font-weight:600;flex-shrink:0;letter-spacing:-.3px;}
-.ea.neg{color:var(--r);}.ea.pos{color:var(--g);}
+.ea.neg{color:var(--red);}.ea.pos{color:var(--green);}
 .bdg{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;}
 .db{background:none;border:none;font-size:17px;cursor:pointer;opacity:.4;padding:4px;flex-shrink:0;}
-/* bars */
+/* BARS */
 .bw{padding:12px 14px;}
 .br{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
 .br:last-child{margin-bottom:0;}
-.bl{font-size:12px;color:var(--t2);width:80px;flex-shrink:0;}
-.bt{flex:1;height:9px;background:var(--sf2);border-radius:5px;overflow:hidden;}
+.bl{font-size:12px;color:var(--text2);width:80px;flex-shrink:0;}
+.bt{flex:1;height:9px;background:var(--surface2);border-radius:5px;overflow:hidden;}
 .bf{height:100%;border-radius:5px;transition:width .5s ease;}
-.bv{font-size:11px;color:var(--t3);width:64px;text-align:right;flex-shrink:0;font-family:'DM Mono',monospace;}
-/* capital hero */
-.cap-hero{margin:12px 14px 0;border-radius:var(--ra);background:var(--g);padding:20px 18px 18px;color:#fff;}
-.ch2-lbl{font-size:12px;opacity:.8;font-weight:500;}
-.ch2-amt{font-size:32px;font-weight:600;letter-spacing:-1px;margin:4px 0 2px;}
-.ch2-dt{font-size:11px;opacity:.7;}
-.ch2-row{display:flex;margin-top:16px;border-top:1px solid rgba(255,255,255,.2);padding-top:14px;}
-.ch2-it{flex:1;text-align:center;}
-.ch2-it+.ch2-it{border-left:1px solid rgba(255,255,255,.2);}
-.ch2-iv{font-size:16px;font-weight:600;}
-.ch2-il{font-size:10px;opacity:.75;margin-top:2px;}
-/* chips */
+.bv{font-size:11px;color:var(--text3);width:64px;text-align:right;flex-shrink:0;font-family:'DM Mono',monospace;}
+/* CAPITAL HERO */
+.cap-hero{margin:12px 14px 0;border-radius:var(--radius);background:var(--green);padding:20px 18px 18px;color:#fff;}
+.cap-lbl{font-size:12px;opacity:.8;font-weight:500;}
+.cap-amt{font-size:32px;font-weight:600;letter-spacing:-1px;margin:4px 0 2px;}
+.cap-dt{font-size:11px;opacity:.7;}
+.cap-row{display:flex;margin-top:16px;border-top:1px solid rgba(255,255,255,.2);padding-top:14px;}
+.cap-it{flex:1;text-align:center;}
+.cap-it+.cap-it{border-left:1px solid rgba(255,255,255,.2);}
+.cap-iv{font-size:16px;font-weight:600;}
+.cap-il{font-size:10px;opacity:.75;margin-top:2px;}
+/* CHIPS */
 .chips{display:flex;gap:6px;padding:10px 14px 0;overflow-x:auto;scrollbar-width:none;}
 .chips::-webkit-scrollbar{display:none;}
-.chip{padding:6px 13px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--bd2);background:var(--sf);cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;color:var(--t2);transition:all .12s;flex-shrink:0;}
-.chip.active{background:var(--g);color:#fff;border-color:var(--g);}
-/* receipts */
+.chip{padding:6px 13px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--border2);background:var(--surface);cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;color:var(--text2);transition:all .12s;flex-shrink:0;}
+.chip.active{background:var(--green);color:#fff;border-color:var(--green);}
+/* RECEIPTS */
 .rg{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:10px 14px 0;}
-.rc{background:var(--sf);border-radius:var(--rs);border:1px solid var(--bd);overflow:hidden;cursor:pointer;}
-.rth{width:100%;height:82px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden;}
+.rc{background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);overflow:hidden;cursor:pointer;}
+.rth{width:100%;height:82px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden;}
 .rth img{width:100%;height:100%;object-fit:cover;}
 .ri{padding:7px 9px;}
 .rin{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.rid{font-size:10px;color:var(--t3);margin-top:1px;}
-/* inventory */
-.inv-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--bd);}
+.rid{font-size:10px;color:var(--text3);margin-top:1px;}
+/* INVENTORY */
+.inv-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);}
 .inv-row:last-child{border-bottom:none;}
 .inv-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
 .inv-inf{flex:1;min-width:0;}
 .inv-nm{font-size:14px;font-weight:600;}
-.inv-st{font-size:12px;color:var(--t2);margin-top:2px;}
+.inv-st{font-size:12px;color:var(--text2);margin-top:2px;}
 .inv-acts{display:flex;gap:5px;flex-shrink:0;}
 .ib{padding:6px 10px;border-radius:7px;font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;}
-.ib.in{background:#E1F5EE;color:#0F6E56;}.ib.out{background:#FCEBEB;color:#C0392B;}.ib.ed{background:var(--sf2);color:var(--t3);padding:6px 8px;}
-.s-ok{color:#0F6E56;font-weight:600;}.s-low{color:#B8860B;font-weight:600;}.s-out{color:#C0392B;font-weight:600;}
-/* movement log */
-.mv-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--bd);}
+.ib.in{background:#E1F5EE;color:#0F6E56;}
+.ib.out{background:#FCEBEB;color:#C0392B;}
+.ib.ed{background:var(--surface2);color:var(--text3);padding:6px 8px;}
+.s-ok{color:#0F6E56;font-weight:600;}
+.s-low{color:#B8860B;font-weight:600;}
+.s-out{color:#C0392B;font-weight:600;}
+/* MOVEMENT LOG */
+.mv-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);}
 .mv-row:last-child{border-bottom:none;}
 .mv-dir{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
 .mv-dir.in{background:#E1F5EE;}.mv-dir.out{background:#FCEBEB;}.mv-dir.adj{background:#FAEEDA;}
 .mv-inf{flex:1;min-width:0;}
 .mv-nm{font-size:13px;font-weight:500;}
-.mv-dt{font-size:11px;color:var(--t3);}
+.mv-dt{font-size:11px;color:var(--text3);}
 .mv-q{font-size:13px;font-weight:600;flex-shrink:0;}
 .mv-q.in{color:#0F6E56;}.mv-q.out{color:#C0392B;}.mv-q.adj{color:#B8860B;}
-/* sales */
-.branch-tabs{display:flex;gap:0;padding:10px 14px 0;}
-.brtab{flex:1;padding:9px 4px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--bd2);background:var(--sf);font-family:'DM Sans',sans-serif;color:var(--t2);transition:all .12s;}
-.brtab:first-child{border-radius:var(--rs) 0 0 var(--rs);}
-.brtab:last-child{border-radius:0 var(--rs) var(--rs) 0;}
-.brtab:not(:first-child){border-left:none;}
-.brtab.active{background:var(--g);color:#fff;border-color:var(--g);}
-.sr-row{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-bottom:1px solid var(--bd);}
-.sr-row:last-child{border-bottom:none;}
-.sr-ico{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:#E1F5EE;}
-.sr-inf{flex:1;min-width:0;}
-.sr-nm{font-size:14px;font-weight:600;}
-.sr-mt{font-size:11px;color:var(--t3);margin-top:2px;line-height:1.7;}
-.sr-amt{font-size:15px;font-weight:600;color:var(--g);flex-shrink:0;}
-.bb{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;margin-right:3px;}
-.bb-0{background:#E1F5EE;color:#085041;}.bb-1{background:#E6F1FB;color:#042C53;}.bb-2{background:#EEEDFE;color:#26215C;}.bb-3{background:#FAEEDA;color:#633806;}
-.date-filter{display:flex;gap:8px;padding:10px 14px 0;align-items:center;}
-.date-filter input{flex:1;padding:8px 10px;border-radius:var(--rs);border:1.5px solid var(--bd2);background:var(--bg);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--t);}
-.date-filter-btn{padding:8px 14px;border-radius:var(--rs);background:var(--g);color:#fff;border:none;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;}
-/* invoice list */
-.ivl-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--bd);cursor:pointer;}
+/* INVOICE LIST */
+.ivl-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;}
 .ivl-row:last-child{border-bottom:none;}
 .ivl-inf{flex:1;min-width:0;}
 .ivl-nm{font-size:14px;font-weight:600;}
-.ivl-mt{font-size:11px;color:var(--t3);margin-top:2px;}
-.ivl-amt{font-size:15px;font-weight:600;color:var(--g);}
+.ivl-mt{font-size:11px;color:var(--text3);margin-top:2px;}
+.ivl-amt{font-size:15px;font-weight:600;color:var(--green);}
 .ivl-st{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;}
-.ivl-st.paid{background:#E1F5EE;color:#0F6E56;}.ivl-st.pending{background:#FAEEDA;color:#854F0B;}
-/* timesheet */
-.emp-card{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--bd);}
-.emp-card:last-child{border-bottom:none;}
-.emp-avatar{width:40px;height:40px;border-radius:50%;background:var(--g);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;}
-.emp-inf{flex:1;min-width:0;}
-.emp-nm{font-size:14px;font-weight:600;}
-.emp-role-lbl{font-size:11px;color:var(--t3);margin-top:1px;}
-.emp-stats{text-align:right;flex-shrink:0;}
-.emp-sv{font-size:14px;font-weight:600;color:var(--g);}
-.emp-sl{font-size:10px;color:var(--t3);}
-.ts-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bd);}
-.ts-row:last-child{border-bottom:none;}
-.ts-date{width:44px;flex-shrink:0;text-align:center;}
-.ts-dd{font-size:18px;font-weight:600;line-height:1;}
-.ts-dm{font-size:10px;color:var(--t3);}
-.ts-inf{flex:1;min-width:0;}
-.ts-times{font-size:13px;font-weight:500;}
-.ts-meta{font-size:11px;color:var(--t3);margin-top:2px;}
-.ts-b{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;}
-.ts-p{background:#E1F5EE;color:#085041;}.ts-a{background:#FCEBEB;color:#501313;}.ts-l{background:#FAEEDA;color:#633806;}.ts-ot{background:#EEEDFE;color:#26215C;}
-.ts-hrs{font-size:13px;font-weight:600;color:var(--t2);flex-shrink:0;min-width:44px;text-align:right;}
-.emp-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 14px 0;}
-.es-c{background:var(--sf);border-radius:var(--rs);padding:10px 6px;border:1px solid var(--bd);text-align:center;}
-.es-v{font-size:17px;font-weight:600;}
-.es-l{font-size:9px;color:var(--t3);margin-top:2px;}
-/* QR code card */
-.qr-card{background:var(--sf);border-radius:var(--ra);border:1px solid var(--bd);margin:10px 14px 0;padding:16px;display:flex;flex-direction:column;align-items:center;gap:10px;}
-.qr-name{font-size:15px;font-weight:600;}
-.qr-role{font-size:12px;color:var(--t3);}
-.qr-canvas{border-radius:8px;border:1px solid var(--bd);}
-.qr-hint{font-size:11px;color:var(--t3);text-align:center;}
-/* change log */
-.log-row{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-bottom:1px solid var(--bd);}
-.log-row:last-child{border-bottom:none;}
-.log-ico{width:34px;height:34px;border-radius:10px;background:#FAEEDA;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
-.log-inf{flex:1;min-width:0;}
-.log-who{font-size:13px;font-weight:600;}
-.log-what{font-size:12px;color:var(--t2);margin-top:2px;line-height:1.5;}
-.log-when{font-size:11px;color:var(--t3);margin-top:2px;}
-.log-new{color:var(--g);font-weight:600;}
-/* invoice print */
+.ivl-st.paid{background:#E1F5EE;color:#0F6E56;}
+.ivl-st.pending{background:#FAEEDA;color:#854F0B;}
+/* INVOICE PRINT */
 #invoice-print{display:none;position:fixed;inset:0;background:#fff;z-index:500;overflow-y:auto;padding:24px 20px;}
 #invoice-print.open{display:block;}
 .ip-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;}
 .ip-logo{font-size:28px;}
-.ip-title{font-size:22px;font-weight:600;color:var(--g);}
-.ip-no{font-size:13px;font-weight:600;color:var(--t2);text-align:right;}
-.ip-date-lbl{font-size:11px;color:var(--t3);margin-top:2px;text-align:right;}
-.ip-div{border:none;border-top:1.5px solid var(--bd2);margin:16px 0;}
-.ip-sl{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.ip-title{font-size:22px;font-weight:600;color:var(--green);}
+.ip-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+.ip-no{font-size:13px;font-weight:600;color:var(--text2);text-align:right;}
+.ip-date{font-size:11px;color:var(--text3);margin-top:2px;text-align:right;}
+.ip-div{border:none;border-top:1.5px solid var(--border2);margin:16px 0;}
+.ip-sl{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
 .ip-parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
-.ip-pnm{font-size:14px;font-weight:600;}
-.ip-paddr{font-size:12px;color:var(--t2);margin-top:2px;line-height:1.5;}
+.ip-party-lbl{font-size:11px;color:var(--text3);margin-bottom:3px;}
+.ip-party-nm{font-size:14px;font-weight:600;}
+.ip-party-addr{font-size:12px;color:var(--text2);margin-top:2px;line-height:1.5;}
 .ip-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;}
-.ip-table th{text-align:left;font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;padding:6px 8px;border-bottom:1.5px solid var(--bd2);}
-.ip-table td{padding:9px 8px;border-bottom:1px solid var(--bd);}
+.ip-table th{text-align:left;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;padding:6px 8px;border-bottom:1.5px solid var(--border2);}
+.ip-table td{padding:9px 8px;border-bottom:1px solid var(--border);}
 .ip-table td:last-child,.ip-table th:last-child{text-align:right;}
 .ip-table tr:last-child td{border-bottom:none;}
 .ip-totals{text-align:right;margin-bottom:20px;}
-.ip-trow{display:flex;justify-content:flex-end;gap:16px;font-size:13px;color:var(--t2);margin-bottom:4px;}
-.ip-grand{display:flex;justify-content:flex-end;gap:16px;font-size:17px;font-weight:600;color:var(--g);margin-top:8px;padding-top:8px;border-top:1.5px solid var(--bd2);}
-.ip-note{background:var(--sf2);border-radius:var(--rs);padding:12px;font-size:12px;color:var(--t2);margin-bottom:16px;}
+.ip-trow{display:flex;justify-content:flex-end;gap:16px;font-size:13px;color:var(--text2);margin-bottom:4px;}
+.ip-grand{display:flex;justify-content:flex-end;gap:16px;font-size:17px;font-weight:600;color:var(--green);margin-top:8px;padding-top:8px;border-top:1.5px solid var(--border2);}
+.ip-note{background:var(--surface2);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--text2);margin-bottom:16px;}
 .ip-btns{display:flex;gap:8px;position:sticky;bottom:0;background:#fff;padding:12px 0 4px;}
-.ip-btn{flex:1;padding:13px;border-radius:var(--rs);font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border:none;}
-.ip-btn.p{background:var(--g);color:#fff;}.ip-btn.g{background:var(--sf2);color:var(--t2);}.ip-btn.b{background:var(--bl);color:#fff;}
-.st-toggle{display:flex;gap:8px;margin-bottom:16px;}
-.st-btn{flex:1;padding:9px;border-radius:var(--rs);font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border:1.5px solid var(--bd2);background:none;color:var(--t2);}
-.st-btn.ap{background:#E1F5EE;border-color:#0F6E56;color:#0F6E56;}
-.st-btn.apd{background:#FAEEDA;border-color:#B8860B;color:#854F0B;}
-/* employee detail */
-#emp-detail-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;overflow-y:auto;padding-bottom:80px;}
-#emp-detail-screen.open{display:block;}
-.edh{background:var(--g);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;}
-.ed-back{background:rgba(255,255,255,.2);border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;}
-.ed-name{font-size:17px;font-weight:600;}
-.ed-role{font-size:11px;opacity:.8;}
-.ed-actions{display:flex;gap:6px;margin-left:auto;}
-.ed-act-btn{background:rgba(255,255,255,.2);border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;padding:6px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;}
-/* modals */
+.ip-btn{flex:1;padding:13px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border:none;}
+.ip-btn.p{background:var(--green);color:#fff;}
+.ip-btn.g{background:var(--surface2);color:var(--text2);}
+.ip-btn.b{background:var(--blue);color:#fff;}
+/* STATUS TOGGLE */
+.status-toggle{display:flex;gap:8px;margin-bottom:16px;}
+.st-btn{flex:1;padding:9px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border:1.5px solid var(--border2);background:none;color:var(--text2);}
+.st-btn.active-paid{background:#E1F5EE;border-color:#0F6E56;color:#0F6E56;}
+.st-btn.active-pending{background:#FAEEDA;border-color:#B8860B;color:#854F0B;}
+/* FAB */
+.fab{position:fixed;bottom:78px;right:16px;width:54px;height:54px;border-radius:50%;background:var(--green);color:#fff;font-size:26px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 14px rgba(15,110,86,.4);z-index:49;transition:transform .12s;}
+.fab:active{transform:scale(.93);}
+/* MODALS */
 .mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:flex-end;justify-content:center;}
 .mo.open{display:flex;}
-.ms{background:var(--sf);border-radius:22px 22px 0 0;width:100%;max-width:480px;padding:16px 16px calc(24px + env(safe-area-inset-bottom));max-height:93vh;overflow-y:auto;}
-.mh{width:38px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 14px;}
+.ms{background:var(--surface);border-radius:22px 22px 0 0;width:100%;max-width:480px;padding:16px 16px calc(24px + env(safe-area-inset-bottom));max-height:93vh;overflow-y:auto;}
+.mh{width:38px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 14px;}
 .mtl{font-size:18px;font-weight:600;margin-bottom:16px;}
 .fg{margin-bottom:13px;}
-.fg label{display:block;font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px;}
-.fg input,.fg select,.fg textarea{width:100%;padding:11px 13px;border-radius:var(--rs);border:1.5px solid var(--bd2);background:var(--bg);font-size:15px;font-family:'DM Sans',sans-serif;color:var(--t);}
-.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--g);}
+.fg label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;}
+.fg input,.fg select,.fg textarea{width:100%;padding:11px 13px;border-radius:var(--radius-sm);border:1.5px solid var(--border2);background:var(--bg);font-size:15px;font-family:'DM Sans',sans-serif;color:var(--text);}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--green);}
 .fg select{appearance:none;}
 .fg textarea{resize:vertical;min-height:70px;}
 .fg-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.ub{border:2px dashed var(--bd2);border-radius:var(--rs);padding:18px;text-align:center;cursor:pointer;}
+.ub{border:2px dashed var(--border2);border-radius:var(--radius-sm);padding:18px;text-align:center;cursor:pointer;}
 .ub-i{font-size:26px;margin-bottom:4px;}
-.ub-t{font-size:12px;color:var(--t3);}
-.upi{width:100%;max-height:130px;object-fit:cover;border-radius:var(--rs);margin-top:8px;display:none;}
-.btn-g{width:100%;padding:14px;border-radius:var(--rs);background:var(--g);color:#fff;border:none;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:4px;}
-.btn-g:active{background:var(--gd);}
-.btn-ghost{width:100%;padding:12px;border-radius:var(--rs);background:none;color:var(--t2);border:1.5px solid var(--bd2);font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:8px;}
+.ub-t{font-size:12px;color:var(--text3);}
+.upi{width:100%;max-height:130px;object-fit:cover;border-radius:var(--radius-sm);margin-top:8px;display:none;}
+.btn-g{width:100%;padding:14px;border-radius:var(--radius-sm);background:var(--green);color:#fff;border:none;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:4px;}
+.btn-g:active{background:var(--green-dark);}
+.btn-ghost{width:100%;padding:12px;border-radius:var(--radius-sm);background:none;color:var(--text2);border:1.5px solid var(--border2);font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:8px;}
+/* LINE ITEMS */
 .li-row{display:flex;align-items:center;gap:5px;margin-bottom:6px;}
 .li-row input{font-size:13px;padding:8px 9px;}
-.li-rm{background:none;border:none;font-size:18px;cursor:pointer;color:var(--t3);padding:3px;flex-shrink:0;}
-.add-li{width:100%;padding:9px;border-radius:var(--rs);background:none;color:var(--g);border:1.5px dashed #0F6E56;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:10px;}
-/* empty / util */
-.empty{text-align:center;padding:36px 16px;color:var(--t3);font-size:13px;}
+.li-rm{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);padding:3px;flex-shrink:0;}
+.add-li{width:100%;padding:9px;border-radius:var(--radius-sm);background:none;color:var(--green);border:1.5px dashed #0F6E56;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:10px;}
+/* EMPTY / TOAST / SPINNER */
+.empty{text-align:center;padding:36px 16px;color:var(--text3);font-size:13px;}
 .empty-icon{font-size:38px;margin-bottom:8px;}
-.empty-text{font-weight:500;color:var(--t2);margin-bottom:4px;font-size:14px;}
+.empty-text{font-weight:500;color:var(--text2);margin-bottom:4px;font-size:14px;}
 .toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:#1A1A18;color:#fff;padding:9px 20px;border-radius:20px;font-size:13px;z-index:999;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;font-weight:500;}
 .toast.show{opacity:1;}
 .sp{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .sd{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.5);display:inline-block;margin-left:6px;vertical-align:middle;}
 .sd.live{background:#5DCAA5;}
-/* restricted overlay */
-.restricted{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;text-align:center;}
-.restricted-icon{font-size:48px;margin-bottom:12px;}
-.restricted-title{font-size:17px;font-weight:600;margin-bottom:6px;}
-.restricted-sub{font-size:13px;color:var(--t3);line-height:1.6;}
+/* SALES REPORT */
+.branch-tabs{display:flex;gap:0;padding:10px 14px 0;}
+.brtab{flex:1;padding:9px 4px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--surface);font-family:'DM Sans',sans-serif;color:var(--text2);transition:all .12s;}
+.brtab:first-child{border-radius:var(--radius-sm) 0 0 var(--radius-sm);}
+.brtab:last-child{border-radius:0 var(--radius-sm) var(--radius-sm) 0;}
+.brtab:not(:first-child){border-left:none;}
+.brtab.active{background:var(--green);color:#fff;border-color:var(--green);}
+.sr-row{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);}
+.sr-row:last-child{border-bottom:none;}
+.sr-ico{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:#E1F5EE;}
+.sr-inf{flex:1;min-width:0;}
+.sr-nm{font-size:14px;font-weight:600;}
+.sr-mt{font-size:11px;color:var(--text3);margin-top:2px;line-height:1.7;}
+.sr-amt{font-size:15px;font-weight:600;color:var(--green);flex-shrink:0;}
+.bb{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;margin-right:3px;}
+.bb-0{background:#E1F5EE;color:#085041;}.bb-1{background:#E6F1FB;color:#042C53;}.bb-2{background:#EEEDFE;color:#26215C;}.bb-3{background:#FAEEDA;color:#633806;}
+.date-filter{display:flex;gap:8px;padding:10px 14px 0;align-items:center;}
+.date-filter input{flex:1;padding:8px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--border2);background:var(--bg);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);}
+.date-filter-btn{padding:8px 14px;border-radius:var(--radius-sm);background:var(--green);color:#fff;border:none;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;}
+/* TIMESHEET */
+.emp-card{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;}
+.emp-card:last-child{border-bottom:none;}
+.emp-avatar{width:40px;height:40px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;}
+.emp-inf{flex:1;min-width:0;}
+.emp-nm{font-size:14px;font-weight:600;}
+.emp-role{font-size:11px;color:var(--text3);margin-top:1px;}
+.emp-stats{text-align:right;flex-shrink:0;}
+.emp-sv{font-size:14px;font-weight:600;color:var(--green);}
+.emp-sl{font-size:10px;color:var(--text3);}
+.ts-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);}
+.ts-row:last-child{border-bottom:none;}
+.ts-date{width:44px;flex-shrink:0;text-align:center;}
+.ts-dd{font-size:18px;font-weight:600;line-height:1;}
+.ts-dm{font-size:10px;color:var(--text3);}
+.ts-inf{flex:1;min-width:0;}
+.ts-times{font-size:13px;font-weight:500;}
+.ts-meta{font-size:11px;color:var(--text3);margin-top:2px;}
+.ts-b{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;}
+.ts-p{background:#E1F5EE;color:#085041;}.ts-a{background:#FCEBEB;color:#501313;}.ts-l{background:#FAEEDA;color:#633806;}.ts-ot{background:#EEEDFE;color:#26215C;}
+.ts-hrs{font-size:13px;font-weight:600;color:var(--text2);flex-shrink:0;min-width:44px;text-align:right;}
+.emp-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 14px 0;}
+.es-c{background:var(--surface);border-radius:var(--radius-sm);padding:10px 6px;border:1px solid var(--border);text-align:center;}
+.es-v{font-size:17px;font-weight:600;}
+.es-l{font-size:9px;color:var(--text3);margin-top:2px;}
+#emp-detail-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;overflow-y:auto;padding-bottom:80px;}
+#emp-detail-screen.open{display:block;}
+.emp-detail-hd{background:var(--green);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;}
+.emp-back-btn{background:rgba(255,255,255,.2);border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;}
+.emp-detail-name{font-size:17px;font-weight:600;}
+.emp-detail-role{font-size:11px;opacity:.8;}
 @media print{body>*:not(#invoice-print){display:none!important;}#invoice-print{display:block!important;position:static;padding:0;}.ip-btns{display:none!important;}}
 </style>
 </head>
 <body>
 
-<!-- ══ LOGIN ══ -->
+<!-- LOGIN -->
 <div id="login-screen">
-  <div class="lfish">🐟</div>
-  <div class="ltitle">CatFish Manager</div>
-  <div class="lsub">Sign in to your account</div>
-  <div class="lcard">
-    <h3>Sign in</h3>
-    <input class="linp" id="login-email" type="email" placeholder="Email address" autocomplete="email"/>
-    <input class="linp" id="login-password" type="password" placeholder="Password" autocomplete="current-password"/>
-    <button class="lbtn" id="login-btn" onclick="doLogin()">Sign In</button>
-    <div class="lerr" id="login-error"></div>
-    <div class="lhint">Contact the owner to get your login details.</div>
+  <div class="lf">🐟</div>
+  <div class="lt">CatFish Manager</div>
+  <div class="ls">Family business tracker<br>Sign in to sync with your family</div>
+  <div class="lc">
+    <h3>Sign in to your family account</h3>
+    <input class="li" id="login-email" type="email" placeholder="Email address" autocomplete="email" />
+    <input class="li" id="login-password" type="password" placeholder="Password" autocomplete="current-password" />
+    <button class="lb" id="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="le" id="login-error"></div>
+    <div class="lh">Only family members with an approved account can sign in.</div>
   </div>
 </div>
 
-<!-- ══ CLOCK IN/OUT SCREEN ══ -->
-<div id="clock-screen">
-  <div class="clk-avatar" id="clk-avatar">👤</div>
-  <div class="clk-name" id="clk-name">Employee</div>
-  <div class="clk-role" id="clk-role">Staff</div>
-  <div class="clk-time" id="clk-time">00:00:00</div>
-  <div class="clk-date" id="clk-date"></div>
-  <div class="clk-status-box">
-    <div class="clk-status-label">Today's status</div>
-    <div class="clk-status-val" id="clk-status-val">Not clocked in</div>
-  </div>
-  <button class="clk-btn in" id="clk-in-btn" onclick="doClockIn()">🟢 Clock In</button>
-  <button class="clk-btn out" id="clk-out-btn" onclick="doClockOut()">🔴 Clock Out</button>
-  <div class="clk-skip" onclick="skipClock()">Skip → Go to app</div>
-</div>
-
-<!-- ══ APP ══ -->
+<!-- APP -->
 <div id="app" class="hidden">
   <div class="topbar">
-    <div class="tb-left">
-      <span class="tb-icon">🐟</span>
-      <div><div class="tb-title">CatFish Manager <span class="sd" id="sync-dot"></span></div><div class="tb-sub" id="tb-sub">Loading...</div></div>
+    <div class="tl"><span class="ti">🐟</span>
+      <div><div class="tt">CatFish Manager <span class="sd" id="sync-dot"></span></div><div class="ts">Family business tracker</div></div>
     </div>
-    <div class="tb-right">
-      <div class="tb-alerts hidden" id="alert-bell" onclick="openChangelog()">🔔<span class="alert-badge" id="alert-count">0</span></div>
-      <span class="tb-user" id="user-label" onclick="doLogout()">Sign out</span>
-    </div>
+    <span class="tu" id="user-label" onclick="doLogout()">Sign out</span>
   </div>
-
   <div class="content">
 
-    <!-- DASHBOARD (owner/manager only) -->
+    <!-- DASHBOARD -->
     <div id="screen-dashboard" class="screen active">
       <div class="mg">
         <div class="mc"><div class="mcl">Net Profit</div><div class="mcv g" id="d-profit">₱0</div><div class="mcs">all time</div></div>
@@ -356,14 +296,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t);font-s
         <div class="mc"><div class="mcl">Total Entries</div><div class="mcv" id="d-entries">0</div><div class="mcs">records</div></div>
       </div>
       <div class="mg" style="margin-top:0;">
-        <div class="mc"><div class="mcl">Inventory Items</div><div class="mcv b" id="d-stockitems">0</div><div class="mcs">types</div></div>
-        <div class="mc"><div class="mcl">Today's Sales</div><div class="mcv g" id="d-today-sales">₱0</div><div class="mcs">all branches</div></div>
+        <div class="mc"><div class="mcl">Inventory Items</div><div class="mcv b" id="d-stockitems">0</div><div class="mcs">types tracked</div></div>
+        <div class="mc"><div class="mcl">Invoices</div><div class="mcv g" id="d-invoices">0</div><div class="mcs">generated</div></div>
       </div>
       <div class="card"><div class="ch"><span class="cht">Expense breakdown</span><span class="chs" id="dash-month"></span></div><div id="expense-bars"><div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No data yet</div></div></div></div>
-      <div class="card"><div class="ch"><span class="cht">Recent activity</span></div><div id="recent-list"><div class="empty"><div class="empty-icon">📝</div><div class="empty-text">No entries yet</div>Tap + to add</div></div></div>
+      <div class="card"><div class="ch"><span class="cht">Recent activity</span></div><div id="recent-list"><div class="empty"><div class="empty-icon">📝</div><div class="empty-text">No entries yet</div>Tap + to add your first entry</div></div></div>
     </div>
 
-    <!-- EXPENSES (owner/manager) -->
+    <!-- EXPENSES -->
     <div id="screen-expenses" class="screen">
       <div class="chips" id="cat-chips">
         <button class="chip active" data-cat="all">All</button>
@@ -378,27 +318,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t);font-s
       <div class="card" style="margin-top:10px;"><div id="expense-list"><div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No expenses yet</div></div></div></div>
     </div>
 
-    <!-- CAPITAL (owner/manager) -->
+    <!-- CAPITAL -->
     <div id="screen-capital" class="screen">
       <div class="cap-hero">
-        <div class="ch2-lbl">Current Standing</div><div class="ch2-amt" id="cap-total">₱0.00</div><div class="ch2-dt" id="cap-date">—</div>
-        <div class="ch2-row">
-          <div class="ch2-it"><div class="ch2-iv" id="cap-income">₱0</div><div class="ch2-il">Income</div></div>
-          <div class="ch2-it"><div class="ch2-iv" id="cap-spent">₱0</div><div class="ch2-il">Spent</div></div>
-          <div class="ch2-it"><div class="ch2-iv" id="cap-net">₱0</div><div class="ch2-il">Profit</div></div>
+        <div class="cap-lbl">Current Standing</div><div class="cap-amt" id="cap-total">₱0.00</div><div class="cap-dt" id="cap-date">—</div>
+        <div class="cap-row">
+          <div class="cap-it"><div class="cap-iv" id="cap-income">₱0</div><div class="cap-il">Total income</div></div>
+          <div class="cap-it"><div class="cap-iv" id="cap-spent">₱0</div><div class="cap-il">Total spent</div></div>
+          <div class="cap-it"><div class="cap-iv" id="cap-net">₱0</div><div class="cap-il">Net profit</div></div>
         </div>
       </div>
       <div class="sl">Capital &amp; income records</div>
-      <div class="card"><div id="capital-list"><div class="empty"><div class="empty-icon">💰</div><div class="empty-text">No entries yet</div></div></div></div>
+      <div class="card"><div id="capital-list"><div class="empty"><div class="empty-icon">💰</div><div class="empty-text">No capital entries yet</div></div></div></div>
     </div>
 
-    <!-- RECEIPTS (owner/manager) -->
+    <!-- RECEIPTS -->
     <div id="screen-receipts" class="screen">
       <div class="sl">Receipts &amp; bills</div>
       <div class="rg" id="receipts-grid"><div style="grid-column:1/-1" class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No receipts yet</div></div></div>
     </div>
 
-    <!-- INVENTORY (all roles) -->
+    <!-- INVENTORY -->
     <div id="screen-inventory" class="screen">
       <div class="mg">
         <div class="mc"><div class="mcl">Total Items</div><div class="mcv b" id="inv-total-items">0</div><div class="mcs">types tracked</div></div>
@@ -406,280 +346,313 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t);font-s
       </div>
       <div class="card" style="margin-top:10px;">
         <div class="ch"><span class="cht">Stock items</span><button class="chb" onclick="openAddItem()">+ Add item</button></div>
-        <div id="inv-items-list"><div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No items yet</div></div></div>
+        <div id="inv-items-list"><div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No inventory items yet</div>Tap "Add item" to start</div></div>
       </div>
-      <div class="card"><div class="ch"><span class="cht">Movement log</span><span class="chs" id="inv-log-sub"></span></div><div id="inv-movement-list"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No movements yet</div></div></div></div>
+      <div class="card">
+        <div class="ch"><span class="cht">Movement log</span><span class="chs" id="inv-log-sub"></span></div>
+        <div id="inv-movement-list"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No movements yet</div></div></div>
+      </div>
     </div>
 
-    <!-- SALES (all roles) -->
+    <!-- INVOICES -->
+    <div id="screen-invoices" class="screen">
+      <div class="mg">
+        <div class="mc"><div class="mcl">Total Billed</div><div class="mcv g" id="inv-billed">₱0</div><div class="mcs">all invoices</div></div>
+        <div class="mc"><div class="mcl">Pending Payment</div><div class="mcv r" id="inv-pending">₱0</div><div class="mcs">unpaid</div></div>
+      </div>
+      <div class="card" style="margin-top:10px;">
+        <div class="ch"><span class="cht">Invoices</span><button class="chb" onclick="openNewInvoice()">+ New invoice</button></div>
+        <div id="invoice-list"><div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No invoices yet</div>Tap "New invoice" to create one</div></div>
+      </div>
+    </div>
+
+
+    <!-- SALES REPORT -->
     <div id="screen-sales" class="screen">
       <div class="mg">
         <div class="mc"><div class="mcl">Today's Sales</div><div class="mcv g" id="sr-today">₱0</div><div class="mcs">all branches</div></div>
         <div class="mc"><div class="mcl">This Month</div><div class="mcv g" id="sr-month">₱0</div><div class="mcs">all branches</div></div>
       </div>
-      <div class="branch-tabs" id="branch-tabs"><button class="brtab active" data-br="all">All</button></div>
+      <div class="branch-tabs" id="branch-tabs">
+        <button class="brtab active" data-br="all">All</button>
+      </div>
       <div class="date-filter">
-        <input type="date" id="sr-from"/><span style="font-size:12px;color:var(--t3);">to</span>
-        <input type="date" id="sr-to"/>
+        <input type="date" id="sr-from" />
+        <span style="font-size:12px;color:var(--text3);">to</span>
+        <input type="date" id="sr-to" />
         <button class="date-filter-btn" onclick="applySalesFilter()">Filter</button>
       </div>
       <div class="card" style="margin-top:10px;">
         <div class="ch"><span class="cht">Sales entries</span><button class="chb" onclick="openNewSale()">+ New sale</button></div>
-        <div id="sales-list"><div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No sales yet</div></div></div>
+        <div id="sales-list"><div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No sales records yet</div>Tap "New sale" to log one</div></div>
       </div>
     </div>
 
-    <!-- INVOICES (all roles) -->
-    <div id="screen-invoices" class="screen">
+    <!-- TIMESHEET -->
+    <div id="screen-timesheet" class="screen">
       <div class="mg">
-        <div class="mc"><div class="mcl">Total Billed</div><div class="mcv g" id="inv-billed">₱0</div><div class="mcs">all invoices</div></div>
-        <div class="mc"><div class="mcl">Pending</div><div class="mcv r" id="inv-pending-amt">₱0</div><div class="mcs">unpaid</div></div>
+        <div class="mc"><div class="mcl">Employees</div><div class="mcv b" id="ts-emp-count">0</div><div class="mcs">total staff</div></div>
+        <div class="mc"><div class="mcl">OT This Month</div><div class="mcv" id="ts-ot-total">0 hrs</div><div class="mcs">overtime hours</div></div>
       </div>
       <div class="card" style="margin-top:10px;">
-        <div class="ch"><span class="cht">Invoices</span><button class="chb" onclick="openNewInvoice()">+ New invoice</button></div>
-        <div id="invoice-list"><div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No invoices yet</div></div></div>
+        <div class="ch"><span class="cht">Employees</span><button class="chb" onclick="openAddEmployee()">+ Add employee</button></div>
+        <div id="emp-list"><div class="empty"><div class="empty-icon">👷</div><div class="empty-text">No employees yet</div>Tap "Add employee" to start</div></div>
       </div>
     </div>
 
-    <!-- TIMESHEET (owner/manager sees all; staff sees own QR) -->
-    <div id="screen-timesheet" class="screen">
-      <div id="ts-owner-view">
-        <div class="mg">
-          <div class="mc"><div class="mcl">Employees</div><div class="mcv b" id="ts-emp-count">0</div><div class="mcs">total staff</div></div>
-          <div class="mc"><div class="mcl">OT This Month</div><div class="mcv" id="ts-ot-total">0 hrs</div><div class="mcs">overtime</div></div>
-        </div>
-        <div class="card" style="margin-top:10px;">
-          <div class="ch"><span class="cht">Employees</span><button class="chb" id="add-emp-btn" onclick="openAddEmployee()">+ Add</button></div>
-          <div id="emp-list"><div class="empty"><div class="empty-icon">👷</div><div class="empty-text">No employees yet</div></div></div>
-        </div>
-      </div>
-      <div id="ts-staff-view" style="display:none;">
-        <div class="sl">My QR Code</div>
-        <div class="qr-card" id="my-qr-card">
-          <div class="qr-name" id="my-qr-name">Loading...</div>
-          <div class="qr-role" id="my-qr-role"></div>
-          <canvas id="my-qr-canvas" class="qr-canvas" width="200" height="200"></canvas>
-          <div class="qr-hint">Show this QR code to clock in/out, or scan the farm QR.</div>
-          <button class="btn-g" style="width:100%;max-width:240px;" onclick="openClockScreen()">⏱ Clock In / Out now</button>
-        </div>
-        <div class="sl" style="margin-top:4px;">My attendance this month</div>
-        <div class="card"><div id="staff-ts-list"><div class="empty"><div class="empty-icon">🕐</div><div class="empty-text">No records yet</div></div></div></div>
-      </div>
-    </div>
+  </div>
+  <nav class="nav">
+    <button class="nb active" data-s="dashboard"><span class="ni">🏠</span>Home</button>
+    <button class="nb" data-s="expenses"><span class="ni">💸</span>Expenses</button>
+    <button class="nb" data-s="inventory"><span class="ni">📦</span>Stock</button>
+    <button class="nb" data-s="sales"><span class="ni">📊</span>Sales</button>
+    <button class="nb" data-s="invoices"><span class="ni">🧾</span>Invoices</button>
+    <button class="nb" data-s="timesheet"><span class="ni">🕐</span>Staff</button>
+    <button class="nb" data-s="capital"><span class="ni">💰</span>Capital</button>
+  </nav>
+</div>
 
-    <!-- CHANGE LOG (owner only) -->
-    <div id="screen-changelog" class="screen">
-      <div class="sl">Manager activity log</div>
-      <div class="card">
-        <div class="ch"><span class="cht">All manager changes</span><button class="chb" onclick="markAlertsRead()">Mark read</button></div>
-        <div id="changelog-list"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No changes logged yet</div></div></div>
-      </div>
-    </div>
+<button class="fab" id="fab">+</button>
 
-    <!-- USER MANAGEMENT (owner only) -->
-    <div id="screen-users" class="screen">
-      <div class="sl">Team members &amp; roles</div>
-      <div class="card">
-        <div class="ch"><span class="cht">Registered users</span><button class="chb" onclick="openAddUser()">+ Add user</button></div>
-        <div id="users-list"><div class="empty"><div class="empty-icon">👥</div><div class="empty-text">No users yet</div></div></div>
-      </div>
-      <div class="sl" style="margin-top:4px;">Branch management</div>
-      <div class="card">
-        <div class="ch"><span class="cht">Branches</span><button class="chb" onclick="openBranchMgmt()">Manage</button></div>
-        <div id="branch-summary"><div class="empty"><div class="empty-icon">🏗</div><div class="empty-text">No branches configured</div></div></div>
-      </div>
-    </div>
-
-  </div><!-- /content -->
-
-  <nav class="nav" id="main-nav"></nav>
-</div><!-- /app -->
-
-<button class="fab" id="fab" style="position:fixed;bottom:78px;right:16px;width:54px;height:54px;border-radius:50%;background:var(--g);color:#fff;font-size:26px;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 3px 14px rgba(15,110,86,.4);z-index:49;transition:transform .12s;">+</button>
-
-<!-- ══ INVOICE PRINT VIEW ══ -->
+<!-- INVOICE PRINT VIEW -->
 <div id="invoice-print">
-  <div class="ip-hd"><div><div class="ip-logo">🐟</div><div class="ip-title">CatFish Farm</div></div><div><div class="ip-no" id="ip-no">INVOICE #001</div><div class="ip-date-lbl" id="ip-date"></div></div></div>
-  <hr class="ip-div"/>
+  <div class="ip-hd">
+    <div><div class="ip-logo">🐟</div><div class="ip-title">CatFish Farm</div></div>
+    <div><div class="ip-no" id="ip-no">INVOICE #001</div><div class="ip-date" id="ip-date"></div></div>
+  </div>
+  <hr class="ip-div" />
   <div class="ip-parties">
-    <div><div class="ip-sl">From</div><div class="ip-pnm">CatFish Farm</div></div>
-    <div><div class="ip-sl">Bill to</div><div class="ip-pnm" id="ip-cust-name"></div><div class="ip-paddr" id="ip-cust-addr"></div></div>
+    <div><div class="ip-sl">From</div><div class="ip-party-nm">CatFish Farm</div></div>
+    <div><div class="ip-sl">Bill to</div><div class="ip-party-nm" id="ip-cust-name"></div><div class="ip-party-addr" id="ip-cust-addr"></div></div>
   </div>
-  <table class="ip-table"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Price</th><th>Total</th></tr></thead><tbody id="ip-line-items"></tbody></table>
-  <div class="ip-totals"><div class="ip-trow"><span>Subtotal</span><span id="ip-subtotal">₱0.00</span></div><div class="ip-grand"><span>Total Due</span><span id="ip-total">₱0.00</span></div></div>
+  <table class="ip-table">
+    <thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Price</th><th>Total</th></tr></thead>
+    <tbody id="ip-line-items"></tbody>
+  </table>
+  <div class="ip-totals">
+    <div class="ip-trow"><span>Subtotal</span><span id="ip-subtotal">₱0.00</span></div>
+    <div class="ip-grand"><span>Total Due</span><span id="ip-total">₱0.00</span></div>
+  </div>
   <div class="ip-note" id="ip-notes-box" style="display:none;"><b>Notes:</b> <span id="ip-notes"></span></div>
-  <div class="ip-note" style="text-align:center;font-size:11px;color:var(--t3);">Thank you for your business! 🐟</div>
-  <div style="margin-bottom:8px;"><div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:6px;">Mark as:</div>
-    <div class="st-toggle"><button class="st-btn" id="st-pending" onclick="setInvoiceStatus('pending')">⏳ Pending</button><button class="st-btn" id="st-paid" onclick="setInvoiceStatus('paid')">✅ Paid</button></div>
-  </div>
-  <div class="ip-btns"><button class="ip-btn g" onclick="closeInvoicePrint()">← Back</button><button class="ip-btn p" onclick="window.print()">🖨 Print/PDF</button><button class="ip-btn b" onclick="shareInvoice()">📤 Share</button></div>
-</div>
-
-<!-- ══ EMPLOYEE DETAIL ══ -->
-<div id="emp-detail-screen">
-  <div class="edh">
-    <button class="ed-back" onclick="closeEmpDetail()">&#8592;</button>
-    <div><div class="ed-name" id="emp-detail-name">Employee</div><div class="ed-role" id="emp-detail-role"></div></div>
-    <div class="ed-actions">
-      <button class="ed-act-btn" onclick="openLogTime()">+ Log time</button>
-      <button class="ed-act-btn" onclick="openEditEmployee()">Edit</button>
+  <div class="ip-note" style="text-align:center;font-size:11px;color:var(--text3);">Thank you for your business! 🐟</div>
+  <div style="margin-bottom:8px;">
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;">Mark invoice as:</div>
+    <div class="status-toggle" id="status-toggle">
+      <button class="st-btn" id="st-pending" onclick="setInvoiceStatus('pending')">⏳ Pending</button>
+      <button class="st-btn" id="st-paid" onclick="setInvoiceStatus('paid')">✅ Paid</button>
     </div>
   </div>
-  <div class="emp-sum" id="emp-sum-grid"></div>
-  <div class="sl">QR Code for this employee</div>
-  <div class="qr-card" id="emp-qr-wrap">
-    <canvas id="emp-qr-canvas" class="qr-canvas" width="160" height="160"></canvas>
-    <div class="qr-hint">Print and give this to the employee. They scan it to clock in/out.</div>
-    <button class="date-filter-btn" onclick="printEmpQR()">🖨 Print QR card</button>
+  <div class="ip-btns">
+    <button class="ip-btn g" onclick="closeInvoicePrint()">← Back</button>
+    <button class="ip-btn p" onclick="window.print()">🖨 Print / PDF</button>
+    <button class="ip-btn b" onclick="shareInvoice()">📤 Share</button>
   </div>
-  <div class="sl">Timesheet records</div>
-  <div class="card" style="margin:0 14px;"><div class="ch"><span class="cht" id="emp-ts-title">Records</span></div><div id="emp-ts-list"><div class="empty"><div class="empty-icon">🕐</div><div class="empty-text">No records yet</div></div></div></div>
-  <div style="padding:14px;"><button class="btn-ghost" onclick="closeEmpDetail()">← Back to employees</button></div>
 </div>
 
-<!-- ══ MODALS ══ -->
-
-<!-- Add Entry -->
+<!-- ADD ENTRY MODAL -->
 <div class="mo" id="modal-entry">
-  <div class="ms"><div class="mh"></div><div class="mtl">Add new entry</div>
-    <div class="fg"><label>Entry type</label><select id="e-type" onchange="onTypeChange()"><option value="expense">💸 Expense</option><option value="income">💵 Income / Sales</option><option value="capital">🏦 Capital added</option></select></div>
-    <div class="fg"><label>Description</label><input id="e-desc" placeholder="e.g. Monthly electricity bill"/></div>
-    <div class="fg" id="cat-fg"><label>Category</label><select id="e-cat"><option value="feeds">🌾 Feeds</option><option value="electricity">⚡ Electricity</option><option value="labor">👷 Labor</option><option value="transport">🚚 Transport</option><option value="medicine">💊 Medicine</option><option value="water">💧 Water</option><option value="other">📦 Other</option></select></div>
-    <div class="fg"><label>Amount (₱)</label><input id="e-amount" type="number" placeholder="0.00" min="0" step="0.01"/></div>
-    <div class="fg"><label>Date</label><input id="e-date" type="date"/></div>
-    <div class="fg"><label>Notes (optional)</label><input id="e-notes" placeholder="Any notes..."/></div>
-    <div class="fg"><label>Attach receipt (optional)</label><div class="ub" onclick="document.getElementById('file-inp').click()"><div class="ub-i">📎</div><div class="ub-t">Tap to take photo</div></div><input type="file" id="file-inp" accept="image/*" capture="environment" style="display:none" onchange="onFilePick(event)"/><img id="e-preview" class="upi"/><div id="e-fname" style="font-size:11px;color:var(--t3);margin-top:4px;"></div></div>
+  <div class="ms">
+    <div class="mh"></div><div class="mtl">Add new entry</div>
+    <div class="fg"><label>Entry type</label>
+      <select id="e-type" onchange="onTypeChange()">
+        <option value="expense">💸 Expense</option>
+        <option value="income">💵 Income / Sales</option>
+        <option value="capital">🏦 Capital added</option>
+      </select>
+    </div>
+    <div class="fg"><label>Description</label><input id="e-desc" placeholder="e.g. Monthly electricity bill" /></div>
+    <div class="fg" id="cat-fg"><label>Category</label>
+      <select id="e-cat">
+        <option value="feeds">🌾 Feeds</option><option value="electricity">⚡ Electricity</option>
+        <option value="labor">👷 Labor / Wages</option><option value="transport">🚚 Transport</option>
+        <option value="medicine">💊 Medicine / Chemicals</option><option value="water">💧 Water</option>
+        <option value="other">📦 Other</option>
+      </select>
+    </div>
+    <div class="fg"><label>Amount (₱)</label><input id="e-amount" type="number" placeholder="0.00" min="0" step="0.01" /></div>
+    <div class="fg"><label>Date</label><input id="e-date" type="date" /></div>
+    <div class="fg"><label>Notes (optional)</label><input id="e-notes" placeholder="Any additional notes..." /></div>
+    <div class="fg">
+      <label>Attach receipt / bill photo (optional)</label>
+      <div class="ub" onclick="document.getElementById('file-inp').click()"><div class="ub-i">📎</div><div class="ub-t">Tap to take photo or choose file</div></div>
+      <input type="file" id="file-inp" accept="image/*" capture="environment" style="display:none" onchange="onFilePick(event)" />
+      <img id="e-preview" class="upi" /><div id="e-fname" style="font-size:11px;color:var(--text3);margin-top:4px;"></div>
+    </div>
     <button class="btn-g" id="save-btn" onclick="saveEntry()">Save entry</button>
     <button class="btn-ghost" onclick="closeEntry()">Cancel</button>
   </div>
 </div>
 
-<!-- Receipt viewer -->
+<!-- RECEIPT VIEWER -->
 <div class="mo" id="modal-receipt">
-  <div class="ms"><div class="mh"></div><div class="mtl" id="rv-title">Receipt</div>
-    <img id="receipt-viewer-img" style="display:none;width:100%;max-height:320px;object-fit:contain;border-radius:var(--rs);"/>
-    <div id="rv-info" style="font-size:13px;color:var(--t2);line-height:2;margin-top:10px;"></div>
+  <div class="ms">
+    <div class="mh"></div><div class="mtl" id="rv-title">Receipt</div>
+    <img id="receipt-viewer-img" style="display:none;width:100%;max-height:320px;object-fit:contain;border-radius:var(--radius-sm);" />
+    <div id="rv-info" style="font-size:13px;color:var(--text2);line-height:2;margin-top:10px;"></div>
     <button class="btn-ghost" onclick="document.getElementById('modal-receipt').classList.remove('open')">Close</button>
   </div>
 </div>
 
-<!-- Add Inventory Item -->
+<!-- ADD INVENTORY ITEM -->
 <div class="mo" id="modal-add-item">
-  <div class="ms"><div class="mh"></div><div class="mtl" id="add-item-title">Add inventory item</div>
-    <div class="fg"><label>Item name</label><input id="item-name" placeholder="e.g. Catfish fingerlings, Pellet feeds..."/></div>
-    <div class="fg"><label>Category</label><select id="item-cat" onchange="onItemCatChange()"><option value="catfish">🐟 Live catfish</option><option value="feeds">🌾 Feeds / Pellets</option><option value="medicine">💊 Medicines &amp; chemicals</option><option value="packaging">📦 Packaging materials</option><option value="other">🔧 Other supplies</option></select></div>
-    <div class="fg-row">
-      <div class="fg"><label>Current stock (count)</label><input id="item-qty" type="number" placeholder="0" min="0"/></div>
-      <div class="fg"><label>Unit (kg, sack, pc…)</label><input id="item-unit" placeholder="kg"/></div>
+  <div class="ms">
+    <div class="mh"></div><div class="mtl" id="add-item-title">Add inventory item</div>
+    <div class="fg"><label>Item name</label><input id="item-name" placeholder="e.g. Catfish fingerlings, Pellet feeds..." /></div>
+    <div class="fg"><label>Category</label>
+      <select id="item-cat" onchange="onItemCatChange()">
+        <option value="catfish">🐟 Live catfish</option><option value="feeds">🌾 Feeds / Pellets</option>
+        <option value="medicine">💊 Medicines &amp; chemicals</option><option value="packaging">📦 Packaging materials</option>
+        <option value="other">🔧 Other supplies</option>
+      </select>
     </div>
-    <div class="fg" id="item-weight-group"><label>Total weight (kg)</label><input id="item-kg" type="number" placeholder="0.00" min="0" step="0.01"/></div>
-    <div class="fg"><label>Low stock alert threshold</label><input id="item-low" type="number" placeholder="e.g. 5" min="0"/></div>
-    <div class="fg"><label>Notes (optional)</label><input id="item-notes" placeholder="e.g. Stored in Pond A"/></div>
+    <div class="fg-row">
+      <div class="fg"><label>Current stock (count)</label><input id="item-qty" type="number" placeholder="0" min="0" /></div>
+      <div class="fg"><label>Unit (kg, sack, pc…)</label><input id="item-unit" placeholder="kg" /></div>
+    </div>
+    <div class="fg" id="item-weight-group"><label>Total weight (kg)</label><input id="item-kg" type="number" placeholder="0.00" min="0" step="0.01" /></div>
+    <div class="fg"><label>Low stock alert threshold</label><input id="item-low" type="number" placeholder="e.g. 5 — alert when stock drops to this" min="0" /></div>
+    <div class="fg"><label>Notes (optional)</label><input id="item-notes" placeholder="e.g. Stored in Pond A" /></div>
     <button class="btn-g" id="item-save-btn" onclick="saveItem()">Save item</button>
     <button class="btn-ghost" onclick="document.getElementById('modal-add-item').classList.remove('open')">Cancel</button>
   </div>
 </div>
 
-<!-- Stock Movement -->
+<!-- STOCK MOVEMENT -->
 <div class="mo" id="modal-movement">
-  <div class="ms"><div class="mh"></div><div class="mtl" id="mv-title">Stock movement</div>
-    <div style="font-size:14px;font-weight:600;color:var(--t2);margin-bottom:12px;" id="mv-item-name"></div>
-    <div class="fg"><label>Movement type</label><select id="mv-type"><option value="in">📥 Stock IN</option><option value="out">📤 Stock OUT</option><option value="adjustment">🔧 Manual adjustment</option></select></div>
-    <div class="fg-row">
-      <div class="fg"><label>Quantity</label><input id="mv-qty" type="number" placeholder="0" min="0"/></div>
-      <div class="fg" id="mv-kg-group"><label>Weight (kg)</label><input id="mv-kg" type="number" placeholder="0.00" min="0" step="0.01"/></div>
+  <div class="ms">
+    <div class="mh"></div><div class="mtl" id="mv-title">Stock movement</div>
+    <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:12px;" id="mv-item-name"></div>
+    <div class="fg"><label>Movement type</label>
+      <select id="mv-type">
+        <option value="in">📥 Stock IN — received / harvested / stocked</option>
+        <option value="out">📤 Stock OUT — sold / used / consumed / mortality</option>
+        <option value="adjustment">🔧 Manual adjustment — correct the quantity</option>
+      </select>
     </div>
-    <div class="fg"><label>Date</label><input id="mv-date" type="date"/></div>
-    <div class="fg"><label>Reason / notes</label><input id="mv-reason" placeholder="e.g. Sold to buyer, consumed, mortality..."/></div>
+    <div class="fg-row">
+      <div class="fg"><label>Quantity (count)</label><input id="mv-qty" type="number" placeholder="0" min="0" /></div>
+      <div class="fg" id="mv-kg-group"><label>Weight (kg)</label><input id="mv-kg" type="number" placeholder="0.00" min="0" step="0.01" /></div>
+    </div>
+    <div class="fg"><label>Date</label><input id="mv-date" type="date" /></div>
+    <div class="fg"><label>Reason / notes</label><input id="mv-reason" placeholder="e.g. Sold to buyer, daily feeding, mortality..." /></div>
     <button class="btn-g" id="mv-save-btn" onclick="saveMovement()">Save movement</button>
     <button class="btn-ghost" onclick="document.getElementById('modal-movement').classList.remove('open')">Cancel</button>
   </div>
 </div>
 
-<!-- New Sale -->
-<div class="mo" id="modal-sale">
-  <div class="ms"><div class="mh"></div><div class="mtl">Log daily sale</div>
-    <div class="fg"><label>Branch</label><select id="sale-branch"></select></div>
-    <div class="fg"><label>Customer / buyer name</label><input id="sale-cust" placeholder="e.g. Aling Maria..."/></div>
-    <div class="fg"><label>Date</label><input id="sale-date" type="date"/></div>
-    <div class="fg"><label>Items sold</label><div id="sale-items-list"></div><button class="add-li" onclick="addSaleItem()">+ Add item row</button></div>
-    <div class="fg"><label>Notes (optional)</label><input id="sale-notes" placeholder="Any notes..."/></div>
-    <button class="btn-g" id="sale-save-btn" onclick="saveSale()">Save sale</button>
-    <button class="btn-ghost" onclick="document.getElementById('modal-sale').classList.remove('open')">Cancel</button>
-  </div>
-</div>
-
-<!-- New Invoice -->
+<!-- NEW INVOICE -->
 <div class="mo" id="modal-invoice">
-  <div class="ms"><div class="mh"></div><div class="mtl">New Invoice</div>
-    <div class="fg"><label>Customer name</label><input id="inv-cust" placeholder="e.g. Juan dela Cruz"/></div>
-    <div class="fg"><label>Customer address (optional)</label><input id="inv-addr" placeholder="e.g. Brgy. San Isidro, QC"/></div>
-    <div class="fg"><label>Invoice date</label><input id="inv-date" type="date"/></div>
-    <div class="fg"><label>Line items</label><div id="line-items-list"></div><button class="add-li" onclick="addLineItem()">+ Add item row</button></div>
+  <div class="ms">
+    <div class="mh"></div><div class="mtl">New Invoice</div>
+    <div class="fg"><label>Customer name</label><input id="inv-cust" placeholder="e.g. Juan dela Cruz" /></div>
+    <div class="fg"><label>Customer address (optional)</label><input id="inv-addr" placeholder="e.g. Brgy. San Isidro, QC" /></div>
+    <div class="fg"><label>Invoice date</label><input id="inv-date" type="date" /></div>
+    <div class="fg">
+      <label>Line items</label>
+      <div id="line-items-list"></div>
+      <button class="add-li" onclick="addLineItem()">+ Add item row</button>
+    </div>
     <div class="fg"><label>Notes / payment terms (optional)</label><textarea id="inv-notes" placeholder="e.g. Payment due within 7 days..."></textarea></div>
     <button class="btn-g" id="inv-save-btn" onclick="saveInvoice()">Generate Invoice</button>
     <button class="btn-ghost" onclick="document.getElementById('modal-invoice').classList.remove('open')">Cancel</button>
   </div>
 </div>
 
-<!-- Add Employee -->
-<div class="mo" id="modal-add-emp">
-  <div class="ms"><div class="mh"></div><div class="mtl" id="add-emp-title">Add employee</div>
-    <div class="fg"><label>Full name</label><input id="emp-name" placeholder="e.g. Pedro Santos"/></div>
-    <div class="fg"><label>Role / position</label><input id="emp-role-inp" placeholder="e.g. Farm worker, Driver..."/></div>
-    <div class="fg"><label>Branch assigned</label><select id="emp-branch"></select></div>
-    <div class="fg"><label>Daily rate (₱) — visible to owner only</label><input id="emp-rate" type="number" placeholder="e.g. 500" min="0"/></div>
-    <div class="fg"><label>Regular hours per day</label><input id="emp-reg-hrs" type="number" placeholder="8" min="1" max="24" value="8"/></div>
-    <button class="btn-g" id="emp-save-btn" onclick="saveEmployee()">Save employee</button>
-    <button class="btn-ghost" onclick="document.getElementById('modal-add-emp').classList.remove('open')">Cancel</button>
+
+<!-- EMPLOYEE DETAIL SCREEN -->
+<div id="emp-detail-screen">
+  <div class="emp-detail-hd">
+    <button class="emp-back-btn" onclick="closeEmpDetail()">&#8592;</button>
+    <div><div class="emp-detail-name" id="emp-detail-name">Employee</div><div class="emp-detail-role" id="emp-detail-role"></div></div>
   </div>
+  <div class="emp-sum" id="emp-sum-grid"></div>
+  <div class="sl">Attendance &amp; timesheet</div>
+  <div class="card" style="margin:0 14px;">
+    <div class="ch"><span class="cht" id="emp-ts-title">Records</span><button class="chb" onclick="openLogTime()">+ Log time</button></div>
+    <div id="emp-ts-list"><div class="empty"><div class="empty-icon">🕐</div><div class="empty-text">No records yet</div></div></div>
+  </div>
+  <div style="padding:14px;"><button class="btn-ghost" onclick="closeEmpDetail()">← Back to employees</button></div>
 </div>
 
-<!-- Log Time -->
-<div class="mo" id="modal-log-time">
-  <div class="ms"><div class="mh"></div><div class="mtl">Log attendance</div>
-    <div style="font-size:14px;font-weight:600;color:var(--t2);margin-bottom:12px;" id="lt-emp-name"></div>
-    <div class="fg"><label>Date</label><input id="lt-date" type="date"/></div>
-    <div class="fg"><label>Status</label><select id="lt-status" onchange="onLtStatusChange()"><option value="present">✅ Present</option><option value="absent">❌ Absent</option><option value="late">⏰ Late</option><option value="halfday">🌓 Half day</option></select></div>
-    <div id="lt-time-group">
-      <div class="fg-row"><div class="fg"><label>Time in</label><input id="lt-in" type="time"/></div><div class="fg"><label>Time out</label><input id="lt-out" type="time"/></div></div>
-      <div class="fg"><label>Overtime hours</label><input id="lt-ot" type="number" placeholder="0" min="0" step="0.5"/></div>
+<!-- ADD SALE MODAL -->
+<div class="mo" id="modal-sale">
+  <div class="ms">
+    <div class="mh"></div><div class="mtl">Log daily sale</div>
+    <div class="fg"><label>Branch</label>
+      <select id="sale-branch"></select>
     </div>
-    <div class="fg"><label>Notes (optional)</label><input id="lt-notes" placeholder="e.g. Sick, emergency..."/></div>
-    <button class="btn-g" id="lt-save-btn" onclick="saveTimeLog()">Save record</button>
-    <button class="btn-ghost" onclick="document.getElementById('modal-log-time').classList.remove('open')">Cancel</button>
+    <div class="fg"><label>Customer / buyer name</label><input id="sale-cust" placeholder="e.g. Aling Maria, Fish Market buyer..." /></div>
+    <div class="fg"><label>Date</label><input id="sale-date" type="date" /></div>
+    <div class="fg"><label>Items sold</label>
+      <div id="sale-items-list"></div>
+      <button class="add-li" onclick="addSaleItem()">+ Add item</button>
+    </div>
+    <div class="fg"><label>Notes (optional)</label><input id="sale-notes" placeholder="Any notes about this sale..." /></div>
+    <button class="btn-g" id="sale-save-btn" onclick="saveSale()">Save sale</button>
+    <button class="btn-ghost" onclick="document.getElementById('modal-sale').classList.remove('open')">Cancel</button>
   </div>
 </div>
 
-<!-- Add User (owner only) -->
-<div class="mo" id="modal-add-user">
-  <div class="ms"><div class="mh"></div><div class="mtl" id="add-user-title">Add / edit user</div>
-    <div style="font-size:13px;color:var(--t2);margin-bottom:14px;line-height:1.6;">Enter the email address the person will use to log in, and assign their role. Their Firebase account must already exist in Firebase Authentication.</div>
-    <div class="fg"><label>Email address</label><input id="user-email" type="email" placeholder="e.g. manager@gmail.com"/></div>
-    <div class="fg"><label>Display name</label><input id="user-display" placeholder="e.g. Maria Santos"/></div>
-    <div class="fg"><label>Role</label><select id="user-role"><option value="owner">👑 Owner</option><option value="manager">🏢 Manager</option><option value="staff">👷 Staff</option></select></div>
-    <div class="fg"><label>Branch (for staff/manager)</label><select id="user-branch-sel"></select></div>
-    <button class="btn-g" id="user-save-btn" onclick="saveUser()">Save user</button>
-    <button class="btn-ghost" onclick="document.getElementById('modal-add-user').classList.remove('open')">Cancel</button>
-  </div>
-</div>
-
-<!-- Branch Management -->
+<!-- MANAGE BRANCHES MODAL -->
 <div class="mo" id="modal-branches">
-  <div class="ms"><div class="mh"></div><div class="mtl">Manage branches</div>
+  <div class="ms">
+    <div class="mh"></div><div class="mtl">Manage branches</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px;">Add or remove your farm branches. Each branch can submit their own sales reports.</div>
     <div id="branch-list-mgmt"></div>
     <div class="fg" style="margin-top:12px;"><label>Add new branch</label>
-      <div style="display:flex;gap:8px;"><input id="new-branch-name" placeholder="e.g. Pond C, South Farm..." style="flex:1;padding:11px 13px;border-radius:var(--rs);border:1.5px solid var(--bd2);background:var(--bg);font-size:15px;font-family:'DM Sans',sans-serif;color:var(--t);"/><button class="date-filter-btn" onclick="addBranch()" style="padding:11px 16px;">Add</button></div>
+      <div style="display:flex;gap:8px;">
+        <input id="new-branch-name" placeholder="e.g. Pond C, South Farm..." style="flex:1;padding:11px 13px;border-radius:var(--radius-sm);border:1.5px solid var(--border2);background:var(--bg);font-size:15px;font-family:'DM Sans',sans-serif;color:var(--text);" />
+        <button class="date-filter-btn" onclick="addBranch()" style="padding:11px 16px;">Add</button>
+      </div>
     </div>
     <button class="btn-ghost" onclick="document.getElementById('modal-branches').classList.remove('open')">Done</button>
   </div>
 </div>
 
+<!-- ADD EMPLOYEE MODAL -->
+<div class="mo" id="modal-add-emp">
+  <div class="ms">
+    <div class="mh"></div><div class="mtl" id="add-emp-title">Add employee</div>
+    <div class="fg"><label>Full name</label><input id="emp-name" placeholder="e.g. Pedro Santos" /></div>
+    <div class="fg"><label>Role / position</label><input id="emp-role-inp" placeholder="e.g. Farm worker, Driver, Guard..." /></div>
+    <div class="fg"><label>Branch assigned</label><select id="emp-branch"></select></div>
+    <div class="fg"><label>Daily rate (₱)</label><input id="emp-rate" type="number" placeholder="e.g. 500" min="0" /></div>
+    <div class="fg"><label>Regular hours per day</label><input id="emp-reg-hrs" type="number" placeholder="8" min="1" max="24" value="8" /></div>
+    <button class="btn-g" id="emp-save-btn" onclick="saveEmployee()">Save employee</button>
+    <button class="btn-ghost" onclick="document.getElementById('modal-add-emp').classList.remove('open')">Cancel</button>
+  </div>
+</div>
+
+<!-- LOG TIME MODAL -->
+<div class="mo" id="modal-log-time">
+  <div class="ms">
+    <div class="mh"></div><div class="mtl">Log attendance</div>
+    <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:12px;" id="lt-emp-name"></div>
+    <div class="fg"><label>Date</label><input id="lt-date" type="date" /></div>
+    <div class="fg"><label>Status</label>
+      <select id="lt-status" onchange="onLtStatusChange()">
+        <option value="present">✅ Present</option>
+        <option value="absent">❌ Absent</option>
+        <option value="late">⏰ Late</option>
+        <option value="halfday">🌓 Half day</option>
+      </select>
+    </div>
+    <div id="lt-time-group">
+      <div class="fg-row">
+        <div class="fg"><label>Time in</label><input id="lt-in" type="time" /></div>
+        <div class="fg"><label>Time out</label><input id="lt-out" type="time" /></div>
+      </div>
+      <div class="fg"><label>Overtime hours (if any)</label><input id="lt-ot" type="number" placeholder="0" min="0" step="0.5" /></div>
+    </div>
+    <div class="fg"><label>Notes (optional)</label><input id="lt-notes" placeholder="e.g. Sick, emergency, etc." /></div>
+    <button class="btn-g" id="lt-save-btn" onclick="saveTimeLog()">Save record</button>
+    <button class="btn-ghost" onclick="document.getElementById('modal-log-time').classList.remove('open')">Cancel</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
-<!-- QR library -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<!-- Firebase -->
+<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -701,9 +674,7 @@ const orderBy=(f,d='desc')=>(q)=>q.orderBy(f,d);
 const onSnapshot=(q,ok,err)=>q.onSnapshot({next:ok,error:err});
 </script>
 <script>
-// ══════════════════════════════════════════════════════════════
-// PASTE YOUR 6 FIREBASE CREDENTIALS HERE
-// ══════════════════════════════════════════════════════════════
+// ── PASTE YOUR 6 FIREBASE CREDENTIALS HERE ──
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBWCx4Xpw3ZkSSVjE7c8WCOvitssWunufQ",
   authDomain: "catfish-business.firebaseapp.com",
@@ -714,102 +685,20 @@ const FIREBASE_CONFIG = {
 };
 const isConfigured = !FIREBASE_CONFIG.apiKey.includes('PASTE');
 
-// ── STATE ──
 let app, auth, db;
-let currentUser = null;   // Firebase auth user
-let userProfile = null;   // Firestore user profile {role, name, branch}
 let entries=[], invItems=[], movements=[], invoices=[];
-let salesRecords=[], employees=[], timeLogs=[], branches=[], userProfiles=[], changeLog=[];
+let salesRecords=[], employees=[], timeLogs=[], branches=[];
 let pendingFile=null, currentMvItemId=null, editingItemId=null, currentInvoiceId=null;
-let lineItemCount=0, saleItemCount=0, currentEmpId=null, editingEmpId=null, editingUserId=null;
+let lineItemCount=0, saleItemCount=0, currentEmpId=null, editingEmpId=null;
 let salesBranchFilter='all', salesDateFrom='', salesDateTo='';
-let unreadAlerts=0;
-const DEFAULT_BRANCHES=['Main Farm','Pond A','Pond B'];
+const DEFAULT_BRANCHES = ['Main Farm','Pond A','Pond B'];
 
-// ── HELPERS ──
 function fmt(n){const x=Number(n)||0;return'₱'+x.toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtShort(n){const x=Number(n)||0;if(Math.abs(x)>=1e6)return'₱'+(x/1e6).toFixed(1)+'M';if(Math.abs(x)>=1000)return'₱'+(x/1000).toFixed(1)+'k';return fmt(x);}
 function fmtDate(d){if(!d)return'';return new Date(d+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});}
-function fmtTS(ts){if(!ts)return'';if(ts.toDate)return ts.toDate().toLocaleString('en-PH',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});return ts;}
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function showToast(msg,dur=2200){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
-function role(){return userProfile?.role||'staff';}
-function isOwner(){return role()==='owner';}
-function isManager(){return role()==='manager';}
-function isStaff(){return role()==='staff';}
-function canEdit(){return isOwner();}
-function canView(section){
-  // owner sees all
-  if(isOwner()) return true;
-  // manager sees all except salary fields (handled inline)
-  if(isManager()) return true;
-  // staff only sees: inventory, sales, invoices, timesheet(own)
-  const staffAllowed=['inventory','sales','invoices','timesheet'];
-  return staffAllowed.includes(section);
-}
 
-// ── ROLE-BASED NAV ──
-const NAV_OWNER=[
-  {s:'dashboard',i:'🏠',l:'Home'},
-  {s:'expenses',i:'💸',l:'Expenses'},
-  {s:'capital',i:'💰',l:'Capital'},
-  {s:'inventory',i:'📦',l:'Stock'},
-  {s:'sales',i:'📊',l:'Sales'},
-  {s:'invoices',i:'🧾',l:'Invoices'},
-  {s:'timesheet',i:'🕐',l:'Staff'},
-  {s:'changelog',i:'📋',l:'Log'},
-  {s:'users',i:'👥',l:'Users'},
-];
-const NAV_MANAGER=[
-  {s:'dashboard',i:'🏠',l:'Home'},
-  {s:'expenses',i:'💸',l:'Expenses'},
-  {s:'capital',i:'💰',l:'Capital'},
-  {s:'inventory',i:'📦',l:'Stock'},
-  {s:'sales',i:'📊',l:'Sales'},
-  {s:'invoices',i:'🧾',l:'Invoices'},
-  {s:'timesheet',i:'🕐',l:'Staff'},
-];
-const NAV_STAFF=[
-  {s:'inventory',i:'📦',l:'Stock'},
-  {s:'sales',i:'📊',l:'Sales'},
-  {s:'invoices',i:'🧾',l:'Invoices'},
-  {s:'timesheet',i:'🕐',l:'My Time'},
-];
-
-function buildNav(){
-  const navList = isOwner()?NAV_OWNER:isManager()?NAV_MANAGER:NAV_STAFF;
-  const nav = document.getElementById('main-nav');
-  nav.innerHTML = navList.map(n=>`<button class="nb" data-s="${n.s}"><span class="ni">${n.i}</span>${n.l}</button>`).join('');
-  nav.querySelectorAll('.nb').forEach(btn=>{
-    btn.addEventListener('click',()=>switchScreen(btn.dataset.s));
-  });
-  // activate first tab
-  switchScreen(navList[0].s, true);
-}
-
-function switchScreen(name, silent=false){
-  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  const btn = document.querySelector(`.nb[data-s="${name}"]`);
-  if(btn) btn.classList.add('active');
-  const scr = document.getElementById('screen-'+name);
-  if(scr) scr.classList.add('active');
-  // update FAB visibility
-  const fabVisible = ['expenses','capital','inventory','sales','invoices','timesheet'].includes(name);
-  const fab = document.getElementById('fab');
-  if(isStaff() && ['expenses','capital'].includes(name)){fab.style.display='none';return;}
-  fab.style.display = fabVisible?'flex':'none';
-  // show/hide timesheet views
-  if(name==='timesheet'){
-    document.getElementById('ts-owner-view').style.display=(isOwner()||isManager())?'block':'none';
-    document.getElementById('ts-staff-view').style.display=isStaff()?'block':'none';
-    if(isStaff()) renderStaffTimesheetView();
-  }
-  if(name==='changelog') renderChangelog();
-  if(name==='users') renderUsers();
-}
-
-// ── COLORS / CATS ──
 const CAT={
   feeds:{bg:'#E1F5EE',bar:'#1D9E75',icon:'🌾',label:'Feeds',badge:'#9FE1CB',btxt:'#085041'},
   electricity:{bg:'#FAEEDA',bar:'#EF9F27',icon:'⚡',label:'Electricity',badge:'#FAC775',btxt:'#633806'},
@@ -821,77 +710,41 @@ const CAT={
   income:{bg:'#EAF3DE',bar:'#639922',icon:'💵',label:'Income',badge:'#C0DD97',btxt:'#173404'},
   capital:{bg:'#E1F5EE',bar:'#085041',icon:'🏦',label:'Capital',badge:'#5DCAA5',btxt:'#04342C'},
 };
-const ICAT={catfish:{icon:'🐟',label:'Live catfish',bg:'#E1F5EE'},feeds:{icon:'🌾',label:'Feeds',bg:'#EAF3DE'},medicine:{icon:'💊',label:'Medicine',bg:'#FCEBEB'},packaging:{icon:'📦',label:'Packaging',bg:'#F1EFE8'},other:{icon:'🔧',label:'Other',bg:'#E6F1FB'}};
+const ICAT={
+  catfish:{icon:'🐟',label:'Live catfish',bg:'#E1F5EE'},
+  feeds:{icon:'🌾',label:'Feeds',bg:'#EAF3DE'},
+  medicine:{icon:'💊',label:'Medicine',bg:'#FCEBEB'},
+  packaging:{icon:'📦',label:'Packaging',bg:'#F1EFE8'},
+  other:{icon:'🔧',label:'Other',bg:'#E6F1FB'},
+};
 function getInfo(e){if(e.type==='income')return CAT.income;if(e.type==='capital')return CAT.capital;return CAT[e.category]||CAT.other;}
 
-// ── CHANGE LOG (manager action logging) ──
-async function logManagerChange(action, details){
-  if(!isManager()) return;
-  try{
-    await addDoc(collection(db,'changelog'),{
-      who: userProfile?.name||currentUser?.email||'Manager',
-      email: currentUser?.email||'',
-      action, details,
-      isRead: false,
-      createdAt: serverTimestamp()
-    });
-  }catch(e){console.warn('changelog error',e);}
-}
-
-function renderChangelog(){
-  const el=document.getElementById('changelog-list');
-  if(!changeLog.length){el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No changes logged yet</div></div>';return;}
-  el.innerHTML=changeLog.map(c=>`<div class="log-row" style="${!c.isRead?'background:#FFFBF0;':''}">
-    <div class="log-ico">✏️</div>
-    <div class="log-inf">
-      <div class="log-who">${escHtml(c.who)} <span style="font-size:10px;color:var(--t3);font-weight:400;">(manager)</span></div>
-      <div class="log-what"><span class="log-new">${escHtml(c.action)}</span>${c.details?' — '+escHtml(c.details):''}</div>
-      <div class="log-when">${fmtTS(c.createdAt)}</div>
-    </div>
-  </div>`).join('');
-}
-
-window.markAlertsRead=async function(){
-  unreadAlerts=0;
-  document.getElementById('alert-count').textContent='0';
-  document.getElementById('alert-bell').style.opacity='0.5';
-  // batch mark read
-  const unread=changeLog.filter(c=>!c.isRead);
-  for(const c of unread){
-    try{await setDoc(doc(db,'changelog',c.id),{isRead:true},{merge:true});}catch(e){}
-  }
-};
-
-window.openChangelog=function(){switchScreen('changelog');markAlertsRead();};
-
-// ── RENDER ──
 function render(){
   const te=entries.filter(e=>e.type==='expense').reduce((s,e)=>s+Number(e.amount),0);
   const ti=entries.filter(e=>e.type==='income').reduce((s,e)=>s+Number(e.amount),0);
   const tc=entries.filter(e=>e.type==='capital').reduce((s,e)=>s+Number(e.amount),0);
   const net=ti-te;
-  const today=new Date().toISOString().split('T')[0];
-  const todaySales=salesRecords.filter(s=>s.date===today).reduce((s,r)=>s+Number(r.total||0),0);
   document.getElementById('d-profit').textContent=fmtShort(net);
   document.getElementById('d-expenses').textContent=fmtShort(te);
   document.getElementById('d-capital').textContent=fmtShort(tc);
   document.getElementById('d-entries').textContent=entries.length;
   document.getElementById('d-stockitems').textContent=invItems.length;
-  document.getElementById('d-today-sales').textContent=fmtShort(todaySales);
+  document.getElementById('d-invoices').textContent=invoices.length;
   document.getElementById('dash-month').textContent=new Date().toLocaleDateString('en-PH',{month:'long',year:'numeric'});
   document.getElementById('cap-total').textContent=fmt(tc+net);
   document.getElementById('cap-date').textContent='Updated: '+new Date().toLocaleDateString('en-PH',{month:'long',day:'numeric',year:'numeric'});
   document.getElementById('cap-income').textContent=fmtShort(ti);
   document.getElementById('cap-spent').textContent=fmtShort(te);
   document.getElementById('cap-net').textContent=fmtShort(net);
-  renderBars();renderRecent();renderExpenses();renderCapital();renderReceipts();renderSalesList();renderInvoiceList();renderInvItems();renderMovements();
+  renderBars();renderRecent();renderExpenses();renderCapital();renderReceipts();
 }
 
 function renderBars(){
   const cats=['feeds','electricity','labor','transport','medicine','water','other'];
   const t={};cats.forEach(c=>t[c]=0);
   entries.filter(e=>e.type==='expense').forEach(e=>{const k=e.category&&t[e.category]!==undefined?e.category:'other';t[k]+=Number(e.amount);});
-  const max=Math.max(...Object.values(t),1);const active=cats.filter(c=>t[c]>0);
+  const max=Math.max(...Object.values(t),1);
+  const active=cats.filter(c=>t[c]>0);
   const el=document.getElementById('expense-bars');
   if(!active.length){el.innerHTML='<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No expense data yet</div></div>';return;}
   el.innerHTML='<div class="bw">'+active.map(c=>{const i=CAT[c];const p=(t[c]/max*100).toFixed(1);return`<div class="br"><div class="bl">${i.icon} ${i.label}</div><div class="bt"><div class="bf" style="width:${p}%;background:${i.bar}"></div></div><div class="bv">${fmtShort(t[c])}</div></div>`;}).join('')+'</div>';
@@ -899,92 +752,396 @@ function renderBars(){
 
 function entryHTML(e,showDel=false){
   const info=getInfo(e);const isExp=e.type==='expense';
-  const del=showDel&&isOwner()?`<button class="db" onclick="deleteEntry('${e.id}')">🗑</button>`:'';
+  const del=showDel?`<button class="db" onclick="deleteEntry('${e.id}')">🗑</button>`:'';
   const rcpt=e.receipt?' 📎':'';
   return`<div class="er"><div class="ei" style="background:${info.bg}">${info.icon}</div><div class="en" onclick="${e.receipt?`viewReceipt('${e.id}')`:''}" style="${e.receipt?'cursor:pointer':''}"><div class="ena">${escHtml(e.description||info.label)}${rcpt}</div><div class="em">${fmtDate(e.date)}<span class="bdg" style="background:${info.badge};color:${info.btxt}">${info.label}</span>${e.notes?`<span>${escHtml(e.notes)}</span>`:''}</div></div><div class="ea ${isExp?'neg':'pos'}">${isExp?'−':'+'} ${fmt(e.amount)}</div>${del}</div>`;
 }
-function renderRecent(){const el=document.getElementById('recent-list');const r=[...entries].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,6);el.innerHTML=r.length?r.map(e=>entryHTML(e)).join(''):'<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">No entries yet</div></div>';}
-function renderExpenses(){const el=document.getElementById('expense-list');const active=document.querySelector('#cat-chips .chip.active')?.dataset.cat||'all';let list=entries.filter(e=>e.type==='expense');if(active!=='all')list=list.filter(e=>e.category===active);list.sort((a,b)=>(b.date||'').localeCompare(a.date||''));el.innerHTML=list.length?list.map(e=>entryHTML(e,true)).join(''):'<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No expenses found</div></div>';}
-function renderCapital(){const el=document.getElementById('capital-list');const list=entries.filter(e=>e.type==='capital'||e.type==='income').sort((a,b)=>(b.date||'').localeCompare(a.date||''));el.innerHTML=list.length?list.map(e=>entryHTML(e,true)).join(''):'<div class="empty"><div class="empty-icon">💰</div><div class="empty-text">No entries yet</div></div>';}
-function renderReceipts(){const el=document.getElementById('receipts-grid');const w=entries.filter(e=>e.receipt).sort((a,b)=>(b.date||'').localeCompare(a.date||''));if(!w.length){el.innerHTML='<div style="grid-column:1/-1" class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No receipts yet</div></div>';return;}el.innerHTML=w.map(e=>`<div class="rc" onclick="viewReceipt('${e.id}')"><div class="rth">${e.receipt.startsWith('data:image')?`<img src="${e.receipt}"/>`:'📄'}</div><div class="ri"><div class="rin">${escHtml(e.description||'Receipt')}</div><div class="rid">${fmtDate(e.date)}</div></div></div>`).join('');}
+function escHelper(s){return String(s||'');}
+function renderRecent(){const el=document.getElementById('recent-list');const r=[...entries].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,6);el.innerHTML=r.length?r.map(e=>entryHTML(e)).join(''):'<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">No entries yet</div>Tap + to add your first entry</div>';}
+function renderExpenses(){const el=document.getElementById('expense-list');const active=document.querySelector('#cat-chips .chip.active')?.dataset.cat||'all';let list=entries.filter(e=>e.type==='expense');if(active!=='all')list=list.filter(e=>e.category===active);list=list.sort((a,b)=>(b.date||'').localeCompare(a.date||''));el.innerHTML=list.length?list.map(e=>entryHTML(e,true)).join(''):'<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No expenses found</div></div>';}
+function renderCapital(){const el=document.getElementById('capital-list');const list=entries.filter(e=>e.type==='capital'||e.type==='income').sort((a,b)=>(b.date||'').localeCompare(a.date||''));el.innerHTML=list.length?list.map(e=>entryHTML(e,true)).join(''):'<div class="empty"><div class="empty-icon">💰</div><div class="empty-text">No capital entries yet</div></div>';}
+function renderReceipts(){const el=document.getElementById('receipts-grid');const w=entries.filter(e=>e.receipt).sort((a,b)=>(b.date||'').localeCompare(a.date||''));if(!w.length){el.innerHTML='<div style="grid-column:1/-1" class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No receipts yet</div></div>';return;}el.innerHTML=w.map(e=>`<div class="rc" onclick="viewReceipt('${e.id}')"><div class="rth">${e.receipt.startsWith('data:image')?`<img src="${e.receipt}" />`:'📄'}</div><div class="ri"><div class="rin">${escHtml(e.description||'Receipt')}</div><div class="rid">${fmtDate(e.date)}</div></div></div>`).join('');}
 
 // ── INVENTORY ──
-function stockStatus(item){const q=Number(item.qty)||0,lo=Number(item.lowAlert)||0;if(q<=0)return{label:'Out of stock',cls:'s-out'};if(lo>0&&q<=lo)return{label:'Low stock',cls:'s-low'};return{label:'In stock',cls:'s-ok'};}
+function stockStatus(item){const q=Number(item.qty)||0;const lo=Number(item.lowAlert)||0;if(q<=0)return{label:'Out of stock',cls:'s-out'};if(lo>0&&q<=lo)return{label:'Low stock',cls:'s-low'};return{label:'In stock',cls:'s-ok'};}
+
 function renderInvItems(){
   const el=document.getElementById('inv-items-list');
   const low=invItems.filter(it=>Number(it.qty)<=Number(it.lowAlert||0)&&Number(it.lowAlert||0)>0).length;
   const out=invItems.filter(it=>Number(it.qty)<=0).length;
   document.getElementById('inv-low-count').textContent=low+out;
   document.getElementById('inv-total-items').textContent=invItems.length;
-  if(!invItems.length){el.innerHTML='<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No items yet</div>Tap + to add</div>';return;}
+  if(!invItems.length){el.innerHTML='<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No inventory items yet</div>Tap "Add item" to start</div>';return;}
   el.innerHTML=invItems.map(item=>{
     const cat=ICAT[item.category]||ICAT.other;const st=stockStatus(item);
     const kgLine=item.category==='catfish'&&item.kg?` · ${Number(item.kg).toFixed(1)} kg`:'';
-    return`<div class="inv-row"><div class="inv-ico" style="background:${cat.bg}">${cat.icon}</div><div class="inv-inf"><div class="inv-nm">${escHtml(item.name)}</div><div class="inv-st"><span class="${st.cls}">${st.label}</span> · ${Number(item.qty)||0} ${escHtml(item.unit||'pcs')}${kgLine}</div>${item.notes?`<div style="font-size:11px;color:var(--t3)">${escHtml(item.notes)}</div>`:''}</div><div class="inv-acts"><button class="ib in" onclick="openMovement('${item.id}','in')">IN</button><button class="ib out" onclick="openMovement('${item.id}','out')">OUT</button><button class="ib ed" onclick="openAddItem('${item.id}')">✏️</button>${isOwner()?`<button class="ib ed" onclick="deleteItem('${item.id}')">🗑</button>`:''}</div></div>`;
+    return`<div class="inv-row"><div class="inv-ico" style="background:${cat.bg}">${cat.icon}</div><div class="inv-inf"><div class="inv-nm">${escHtml(item.name)}</div><div class="inv-st"><span class="${st.cls}">${st.label}</span> · ${Number(item.qty)||0} ${escHtml(item.unit||'pcs')}${kgLine}</div>${item.notes?`<div style="font-size:11px;color:var(--text3)">${escHtml(item.notes)}</div>`:''}</div><div class="inv-acts"><button class="ib in" onclick="openMovement('${item.id}','in')">IN</button><button class="ib out" onclick="openMovement('${item.id}','out')">OUT</button><button class="ib ed" onclick="openAddItem('${item.id}')">✏️</button><button class="ib ed" onclick="deleteItem('${item.id}')">🗑</button></div></div>`;
   }).join('');
 }
+
 function renderMovements(){
-  const el=document.getElementById('inv-movement-list');const sub=document.getElementById('inv-log-sub');
+  const el=document.getElementById('inv-movement-list');
+  const sub=document.getElementById('inv-log-sub');
   const recent=[...movements].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,40);
   sub.textContent=`${movements.length} total`;
   if(!recent.length){el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No movements yet</div></div>';return;}
   el.innerHTML=recent.map(mv=>{
-    const item=invItems.find(i=>i.id===mv.itemId);const nm=item?item.name:(mv.itemName||'Unknown');
+    const item=invItems.find(i=>i.id===mv.itemId);
+    const nm=item?item.name:(mv.itemName||'Unknown item');
     const isIn=mv.type==='in';const isAdj=mv.type==='adjustment';
-    const icon=isAdj?'🔧':isIn?'📥':'📤';const dc=isAdj?'adj':mv.type;
-    const kgPart=mv.kg?` · ${Number(mv.kg).toFixed(1)} kg`:'';const sign=isAdj?'→':isIn?'+':'-';
-    return`<div class="mv-row"><div class="mv-dir ${dc}">${icon}</div><div class="mv-inf"><div class="mv-nm">${escHtml(nm)}${mv.reason?` — ${escHtml(mv.reason)}`:''}</div><div class="mv-dt">${fmtDate(mv.date)}${kgPart}${mv.createdBy?` · ${escHtml(mv.createdBy)}`:''}</div></div><div class="mv-q ${dc}">${sign}${Number(mv.qty)||0} ${item?escHtml(item.unit||''):''}</div></div>`;
+    const icon=isAdj?'🔧':isIn?'📥':'📤';
+    const dc=isAdj?'adj':mv.type;
+    const kgPart=mv.kg?` · ${Number(mv.kg).toFixed(1)} kg`:'';
+    const sign=isAdj?'→':isIn?'+':'-';
+    return`<div class="mv-row"><div class="mv-dir ${dc}">${icon}</div><div class="mv-inf"><div class="mv-nm">${escHtml(nm)}${mv.reason?` — ${escHtml(mv.reason)}`:''}</div><div class="mv-dt">${fmtDate(mv.date)}${kgPart}</div></div><div class="mv-q ${dc}">${sign}${Number(mv.qty)||0} ${item?escHtml(item.unit||''):''}</div></div>`;
   }).join('');
 }
 
-// ── SALES ──
-function getBranchList(){return branches.length?branches:DEFAULT_BRANCHES;}
-function renderBranchTabs(){
-  const list=getBranchList();
-  const tabs=document.getElementById('branch-tabs');
-  tabs.innerHTML=`<button class="brtab ${salesBranchFilter==='all'?'active':''}" data-br="all">All</button>`+list.map((b,i)=>`<button class="brtab ${salesBranchFilter===b?'active':''}" data-br="${escHtml(b)}">${escHtml(b)}</button>`).join('');
-  tabs.querySelectorAll('.brtab').forEach(btn=>{btn.addEventListener('click',()=>{salesBranchFilter=btn.dataset.br;renderBranchTabs();renderSalesList();});});
-  const bSel=document.getElementById('sale-branch');
-  if(bSel)bSel.innerHTML=list.map(b=>`<option value="${escHtml(b)}">${escHtml(b)}</option>`).join('');
-  const eSel=document.getElementById('emp-branch');
-  if(eSel)eSel.innerHTML=list.map(b=>`<option value="${escHtml(b)}">${escHtml(b)}</option>`).join('');
-  const uSel=document.getElementById('user-branch-sel');
-  if(uSel)uSel.innerHTML='<option value="">— All branches —</option>'+list.map(b=>`<option value="${escHtml(b)}">${escHtml(b)}</option>`).join('');
-}
-window.applySalesFilter=function(){salesDateFrom=document.getElementById('sr-from').value;salesDateTo=document.getElementById('sr-to').value;renderSalesList();};
-function renderSalesList(){
-  const today=new Date().toISOString().split('T')[0];const mPfx=today.slice(0,7);
-  document.getElementById('sr-today').textContent=fmtShort(salesRecords.filter(s=>s.date===today).reduce((s,r)=>s+Number(r.total||0),0));
-  document.getElementById('sr-month').textContent=fmtShort(salesRecords.filter(s=>(s.date||'').startsWith(mPfx)).reduce((s,r)=>s+Number(r.total||0),0));
-  const el=document.getElementById('sales-list');
-  let list=[...salesRecords];
-  if(salesBranchFilter!=='all')list=list.filter(s=>s.branch===salesBranchFilter);
-  if(salesDateFrom)list=list.filter(s=>s.date>=salesDateFrom);
-  if(salesDateTo)list=list.filter(s=>s.date<=salesDateTo);
-  list.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No sales found</div></div>';return;}
-  const brList=getBranchList();
-  el.innerHTML=list.map(s=>{
-    const bi=brList.indexOf(s.branch);const bbCls='bb bb-'+(bi>=0?bi:3);
-    const items=(s.items||[]).map(it=>`${Number(it.qty).toFixed(1)} ${it.unit||'kg'} ${escHtml(it.name)} @ ${fmt(it.price)}`).join(' · ');
-    const canDel=isOwner()||(isManager()&&s.createdBy===currentUser?.email);
-    return`<div class="sr-row"><div class="sr-ico">📊</div><div class="sr-inf"><div class="sr-nm">${escHtml(s.customerName||'Walk-in buyer')}</div><div class="sr-mt"><span class="${bbCls}">${escHtml(s.branch||'—')}</span>${fmtDate(s.date)}<br>${items?`<span style="color:var(--t2)">${items}</span><br>`:''}<span>by ${escHtml(s.submittedBy||'—')}</span>${s.notes?`<br><span style="color:var(--t3)">${escHtml(s.notes)}</span>`:''}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;"><div class="sr-amt">${fmt(s.total)}</div>${canDel?`<button class="ib ed" onclick="deleteSale('${s.id}')">🗑</button>`:''}</div></div>`;
-  }).join('');
-}
-
-// ── INVOICES ──
+// ── INVOICE ──
 function renderInvoiceList(){
   const el=document.getElementById('invoice-list');
   const tb=invoices.reduce((s,i)=>s+Number(i.total||0),0);
   const pb=invoices.filter(i=>i.status==='pending').reduce((s,i)=>s+Number(i.total||0),0);
   document.getElementById('inv-billed').textContent=fmtShort(tb);
-  document.getElementById('inv-pending-amt').textContent=fmtShort(pb);
-  if(!invoices.length){el.innerHTML='<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No invoices yet</div></div>';return;}
-  el.innerHTML=[...invoices].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(inv=>{
+  document.getElementById('inv-pending').textContent=fmtShort(pb);
+  document.getElementById('d-invoices').textContent=invoices.length;
+  if(!invoices.length){el.innerHTML='<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No invoices yet</div>Tap "New invoice" to create one</div>';return;}
+  const sorted=[...invoices].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  el.innerHTML=sorted.map(inv=>{
     const sc=inv.status==='paid'?'paid':'pending';
     return`<div class="ivl-row" onclick="viewInvoice('${inv.id}')"><div style="width:40px;height:40px;border-radius:11px;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🧾</div><div class="ivl-inf"><div class="ivl-nm">${escHtml(inv.customerName||'Customer')}</div><div class="ivl-mt">${fmtDate(inv.date)} · INV-${String(inv.invoiceNo||'').padStart(3,'0')}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;"><div class="ivl-amt">${fmt(inv.total)}</div><span class="ivl-st ${sc}">${inv.status==='paid'?'✅ Paid':'⏳ Pending'}</span></div></div>`;
   }).join('');
 }
+
+// ── ACTIONS ──
+window.viewReceipt=function(id){const e=entries.find(x=>x.id===id);if(!e)return;document.getElementById('rv-title').textContent=e.description||'Receipt';const img=document.getElementById('receipt-viewer-img');img.style.display=e.receipt&&e.receipt.startsWith('data:image')?'block':'none';if(img.style.display==='block')img.src=e.receipt;const info=getInfo(e);document.getElementById('rv-info').innerHTML=`<b>Amount:</b> ${fmt(e.amount)}<br><b>Date:</b> ${fmtDate(e.date)}<br><b>Type:</b> ${info.label}${e.notes?'<br><b>Notes:</b> '+escHtml(e.notes):''}`;document.getElementById('modal-receipt').classList.add('open');};
+window.deleteEntry=async function(id){if(!confirm('Delete this entry?'))return;try{await deleteDoc(doc(db,'entries',id));showToast('Entry deleted');}catch(err){showToast('Error: '+err.message);}};
+window.deleteItem=async function(id){if(!confirm('Delete this inventory item?'))return;try{await deleteDoc(doc(db,'invItems',id));showToast('Item deleted');}catch(err){showToast('Error: '+err.message);}};
+
+window.openAddItem=function(id){
+  editingItemId=id||null;
+  const item=id?invItems.find(i=>i.id===id):null;
+  document.getElementById('add-item-title').textContent=item?'Edit item':'Add inventory item';
+  document.getElementById('item-name').value=item?.name||'';
+  document.getElementById('item-cat').value=item?.category||'catfish';
+  document.getElementById('item-qty').value=item?.qty??'';
+  document.getElementById('item-unit').value=item?.unit||'kg';
+  document.getElementById('item-kg').value=item?.kg??'';
+  document.getElementById('item-low').value=item?.lowAlert??'';
+  document.getElementById('item-notes').value=item?.notes||'';
+  onItemCatChange();
+  document.getElementById('modal-add-item').classList.add('open');
+};
+
+window.onItemCatChange=function(){
+  document.getElementById('item-weight-group').style.display=document.getElementById('item-cat').value==='catfish'?'block':'none';
+};
+
+window.saveItem=async function(){
+  const name=document.getElementById('item-name').value.trim();
+  const cat=document.getElementById('item-cat').value;
+  const qty=parseFloat(document.getElementById('item-qty').value)||0;
+  const unit=document.getElementById('item-unit').value.trim()||'pcs';
+  const kg=parseFloat(document.getElementById('item-kg').value)||0;
+  const low=parseFloat(document.getElementById('item-low').value)||0;
+  const notes=document.getElementById('item-notes').value.trim();
+  if(!name){showToast('Please enter item name');return;}
+  const btn=document.getElementById('item-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
+  try{
+    const data={name,category:cat,qty,unit,kg:cat==='catfish'?kg:0,lowAlert:low,notes:notes||null,updatedAt:serverTimestamp()};
+    if(editingItemId){await setDoc(doc(db,'invItems',editingItemId),data,{merge:true});}
+    else{await addDoc(collection(db,'invItems'),{...data,createdAt:serverTimestamp()});}
+    document.getElementById('modal-add-item').classList.remove('open');showToast('✓ Item saved!');
+  }catch(err){showToast('Error: '+err.message);}
+  finally{btn.disabled=false;btn.textContent='Save item';}
+};
+
+window.openMovement=function(itemId,dir){
+  currentMvItemId=itemId;
+  const item=invItems.find(i=>i.id===itemId);
+  document.getElementById('mv-title').textContent=dir==='in'?'📥 Stock IN':'📤 Stock OUT';
+  document.getElementById('mv-item-name').textContent=item?item.name:'';
+  document.getElementById('mv-type').value=dir;
+  document.getElementById('mv-qty').value='';document.getElementById('mv-kg').value='';document.getElementById('mv-reason').value='';
+  document.getElementById('mv-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('mv-kg-group').style.display=item?.category==='catfish'?'block':'none';
+  document.getElementById('modal-movement').classList.add('open');
+};
+
+window.saveMovement=async function(){
+  const qty=parseFloat(document.getElementById('mv-qty').value)||0;
+  const type=document.getElementById('mv-type').value;
+  const date=document.getElementById('mv-date').value;
+  const reason=document.getElementById('mv-reason').value.trim();
+  const kg=parseFloat(document.getElementById('mv-kg').value)||0;
+  if(!qty){showToast('Please enter quantity');return;}
+  if(!date){showToast('Please choose a date');return;}
+  const btn=document.getElementById('mv-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
+  try{
+    const item=invItems.find(i=>i.id===currentMvItemId);
+    await addDoc(collection(db,'movements'),{itemId:currentMvItemId,itemName:item?.name||'',type,qty,kg:item?.category==='catfish'?kg:0,date,reason:reason||null,createdAt:serverTimestamp(),createdBy:auth.currentUser?.email||'unknown'});
+    if(item){
+      let nq=Number(item.qty)||0,nk=Number(item.kg)||0;
+      if(type==='in'){nq+=qty;nk+=kg;}
+      else if(type==='out'){nq=Math.max(0,nq-qty);nk=Math.max(0,nk-kg);}
+      else if(type==='adjustment'){nq=qty;nk=kg;}
+      await setDoc(doc(db,'invItems',item.id),{qty:nq,kg:nk,updatedAt:serverTimestamp()},{merge:true});
+    }
+    document.getElementById('modal-movement').classList.remove('open');showToast('✓ Movement saved!');
+  }catch(err){showToast('Error: '+err.message);}
+  finally{btn.disabled=false;btn.textContent='Save movement';}
+};
+
+window.openNewInvoice=function(){
+  lineItemCount=0;document.getElementById('line-items-list').innerHTML='';
+  document.getElementById('inv-cust').value='';document.getElementById('inv-addr').value='';
+  document.getElementById('inv-notes').value='';
+  document.getElementById('inv-date').value=new Date().toISOString().split('T')[0];
+  addLineItem();
+  document.getElementById('modal-invoice').classList.add('open');
+};
+
+window.addLineItem=function(){
+  lineItemCount++;const id='li-'+lineItemCount;
+  const div=document.createElement('div');div.className='li-row';div.id=id;
+  div.innerHTML=`<input placeholder="Item name" style="flex:2" class="li-name" /><input placeholder="Qty" type="number" min="0" step="0.1" style="flex:1" class="li-qty" oninput="calcLT('${id}')" /><input placeholder="Unit" style="flex:0.8" class="li-unit" value="kg" /><input placeholder="₱/unit" type="number" min="0" step="0.01" style="flex:1.2" class="li-price" oninput="calcLT('${id}')" /><input placeholder="Total" type="number" style="flex:1.2" class="li-total" readonly /><button class="li-rm" onclick="document.getElementById('${id}').remove()">✕</button>`;
+  document.getElementById('line-items-list').appendChild(div);
+};
+
+window.calcLT=function(id){
+  const row=document.getElementById(id);if(!row)return;
+  const q=parseFloat(row.querySelector('.li-qty').value)||0;
+  const p=parseFloat(row.querySelector('.li-price').value)||0;
+  row.querySelector('.li-total').value=(q*p).toFixed(2);
+};
+
+window.saveInvoice=async function(){
+  const cust=document.getElementById('inv-cust').value.trim();
+  const addr=document.getElementById('inv-addr').value.trim();
+  const date=document.getElementById('inv-date').value;
+  const notes=document.getElementById('inv-notes').value.trim();
+  if(!cust){showToast('Please enter customer name');return;}
+  if(!date){showToast('Please choose a date');return;}
+  const rows=document.querySelectorAll('#line-items-list .li-row');
+  const lineItems=[];
+  rows.forEach(row=>{
+    const name=row.querySelector('.li-name').value.trim();
+    const qty=parseFloat(row.querySelector('.li-qty').value)||0;
+    const unit=row.querySelector('.li-unit').value.trim()||'kg';
+    const price=parseFloat(row.querySelector('.li-price').value)||0;
+    if(name&&qty&&price)lineItems.push({name,qty,unit,price,total:qty*price});
+  });
+  if(!lineItems.length){showToast('Add at least one line item with name, qty and price');return;}
+  const total=lineItems.reduce((s,i)=>s+i.total,0);
+  const invoiceNo=invoices.length+1;
+  const btn=document.getElementById('inv-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
+  try{
+    const ref=await addDoc(collection(db,'invoices'),{customerName:cust,customerAddress:addr||null,date,lineItems,total,notes:notes||null,invoiceNo,status:'pending',createdAt:serverTimestamp(),createdBy:auth.currentUser?.email||'unknown'});
+    document.getElementById('modal-invoice').classList.remove('open');showToast('✓ Invoice created!');
+    setTimeout(()=>viewInvoice(ref.id),400);
+  }catch(err){showToast('Error: '+err.message);}
+  finally{btn.disabled=false;btn.textContent='Generate Invoice';}
+};
+
+window.viewInvoice=function(id){
+  const inv=invoices.find(i=>i.id===id);if(!inv)return;
+  currentInvoiceId=id;
+  document.getElementById('ip-no').textContent='INVOICE #'+String(inv.invoiceNo||'').padStart(3,'0');
+  document.getElementById('ip-date').textContent='Date: '+fmtDate(inv.date);
+  document.getElementById('ip-cust-name').textContent=inv.customerName||'';
+  document.getElementById('ip-cust-addr').textContent=inv.customerAddress||'';
+  const tbody=document.getElementById('ip-line-items');let sub=0;
+  tbody.innerHTML=(inv.lineItems||[]).map(li=>{sub+=Number(li.total)||0;return`<tr><td>${escHtml(li.name)}</td><td>${Number(li.qty).toFixed(2)}</td><td>${escHtml(li.unit||'')}</td><td>${fmt(li.price)}</td><td>${fmt(li.total)}</td></tr>`;}).join('');
+  document.getElementById('ip-subtotal').textContent=fmt(sub);
+  document.getElementById('ip-total').textContent=fmt(inv.total);
+  const nb=document.getElementById('ip-notes-box');
+  if(inv.notes){nb.style.display='block';document.getElementById('ip-notes').textContent=inv.notes;}else{nb.style.display='none';}
+  // Status buttons
+  const isPaid=inv.status==='paid';
+  document.getElementById('st-paid').className='st-btn'+(isPaid?' active-paid':'');
+  document.getElementById('st-pending').className='st-btn'+(!isPaid?' active-pending':'');
+  document.getElementById('invoice-print').classList.add('open');
+};
+
+window.setInvoiceStatus=async function(status){
+  if(!currentInvoiceId)return;
+  try{
+    await setDoc(doc(db,'invoices',currentInvoiceId),{status},{merge:true});
+    showToast(status==='paid'?'✅ Marked as paid!':'⏳ Marked as pending');
+    document.getElementById('st-paid').className='st-btn'+(status==='paid'?' active-paid':'');
+    document.getElementById('st-pending').className='st-btn'+(status==='pending'?' active-pending':'');
+  }catch(err){showToast('Error: '+err.message);}
+};
+
+window.closeInvoicePrint=function(){document.getElementById('invoice-print').classList.remove('open');};
+window.shareInvoice=function(){if(navigator.share){navigator.share({title:'CatFish Invoice',text:'Invoice from CatFish Farm',url:window.location.href}).catch(()=>{});}else{showToast('Use Print → Save as PDF to share');}};
+
+
+// ── SALES REPORT ──
+function getBranchList(){ return branches.length ? branches : DEFAULT_BRANCHES; }
+
+function renderBranchTabs(){
+  const list = getBranchList();
+  const tabs = document.getElementById('branch-tabs');
+  tabs.innerHTML = `<button class="brtab ${salesBranchFilter==='all'?'active':''}" data-br="all">All</button>`
+    + list.map((b,i)=>`<button class="brtab ${salesBranchFilter===b?'active':''}" data-br="${escHtml(b)}">${escHtml(b)}</button>`).join('');
+  tabs.querySelectorAll('.brtab').forEach(btn=>{
+    btn.addEventListener('click',()=>{ salesBranchFilter=btn.dataset.br; renderBranchTabs(); renderSalesList(); });
+  });
+  // populate branch selects
+  const bSel = document.getElementById('sale-branch');
+  if(bSel) bSel.innerHTML = list.map(b=>`<option value="${escHtml(b)}">${escHtml(b)}</option>`).join('');
+  const eSel = document.getElementById('emp-branch');
+  if(eSel) eSel.innerHTML = list.map(b=>`<option value="${escHtml(b)}">${escHtml(b)}</option>`).join('');
+}
+
+function renderBranchMgmt(){
+  const list = getBranchList();
+  const el = document.getElementById('branch-list-mgmt');
+  if(!el) return;
+  el.innerHTML = list.map((b,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+    <span style="flex:1;font-size:14px;font-weight:500;">${escHtml(b)}</span>
+    <button class="ib ed" onclick="deleteBranch('${escHtml(b)}')">🗑</button>
+  </div>`).join('') || '<div style="font-size:13px;color:var(--text3);padding:8px 0;">No branches yet</div>';
+}
+
+window.addBranch = async function(){
+  const nm = document.getElementById('new-branch-name').value.trim();
+  if(!nm){ showToast('Enter a branch name'); return; }
+  const list = [...getBranchList()];
+  if(list.includes(nm)){ showToast('Branch already exists'); return; }
+  list.push(nm);
+  try{
+    await setDoc(doc(db,'settings','branches'),{list, updatedAt:serverTimestamp()},{merge:true});
+    document.getElementById('new-branch-name').value='';
+    showToast('✓ Branch added!');
+  }catch(err){showToast('Error: '+err.message);}
+};
+
+window.deleteBranch = async function(name){
+  if(!confirm('Remove branch "'+name+'"?')) return;
+  const list = getBranchList().filter(b=>b!==name);
+  try{
+    await setDoc(doc(db,'settings','branches'),{list, updatedAt:serverTimestamp()},{merge:true});
+    showToast('Branch removed');
+  }catch(err){showToast('Error: '+err.message);}
+};
+
+function getSalesFiltered(){
+  let list = [...salesRecords];
+  if(salesBranchFilter!=='all') list=list.filter(s=>s.branch===salesBranchFilter);
+  if(salesDateFrom) list=list.filter(s=>s.date>=salesDateFrom);
+  if(salesDateTo)   list=list.filter(s=>s.date<=salesDateTo);
+  return list.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+}
+
+window.applySalesFilter = function(){
+  salesDateFrom = document.getElementById('sr-from').value;
+  salesDateTo   = document.getElementById('sr-to').value;
+  renderSalesList();
+};
+
+function renderSalesMetrics(){
+  const today = new Date().toISOString().split('T')[0];
+  const monthPfx = today.slice(0,7);
+  const todayTotal = salesRecords.filter(s=>s.date===today).reduce((sum,s)=>sum+Number(s.total||0),0);
+  const monthTotal = salesRecords.filter(s=>(s.date||'').startsWith(monthPfx)).reduce((sum,s)=>sum+Number(s.total||0),0);
+  document.getElementById('sr-today').textContent = fmtShort(todayTotal);
+  document.getElementById('sr-month').textContent = fmtShort(monthTotal);
+}
+
+function renderSalesList(){
+  renderSalesMetrics();
+  const el = document.getElementById('sales-list');
+  const list = getSalesFiltered();
+  if(!list.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No sales records</div>'+
+      (salesBranchFilter!=='all'||salesDateFrom?'Try a different filter':'Tap "New sale" to log one')+'</div>';
+    return;
+  }
+  const brList = getBranchList();
+  el.innerHTML = list.map(s=>{
+    const bi = brList.indexOf(s.branch);
+    const bbCls = 'bb bb-'+(bi>=0?bi:3);
+    const items = (s.items||[]).map(it=>`${Number(it.qty).toFixed(1)} ${it.unit||'kg'} ${escHtml(it.name)} @ ${fmt(it.price)}`).join(' · ');
+    return`<div class="sr-row">
+      <div class="sr-ico">📊</div>
+      <div class="sr-inf">
+        <div class="sr-nm">${escHtml(s.customerName||'Walk-in buyer')}</div>
+        <div class="sr-mt">
+          <span class="${bbCls}">${escHtml(s.branch||'—')}</span>${fmtDate(s.date)}<br>
+          ${items?`<span style="color:var(--text2)">${items}</span>`:''}
+          ${s.submittedBy?`<br><span>by ${escHtml(s.submittedBy)}</span>`:''}
+          ${s.notes?`<br><span style="color:var(--text3)">${escHtml(s.notes)}</span>`:''}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        <div class="sr-amt">${fmt(s.total)}</div>
+        <button class="ib ed" onclick="deleteSale('${s.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.openNewSale = function(){
+  saleItemCount=0;
+  document.getElementById('sale-items-list').innerHTML='';
+  document.getElementById('sale-cust').value='';
+  document.getElementById('sale-notes').value='';
+  document.getElementById('sale-date').value=new Date().toISOString().split('T')[0];
+  renderBranchTabs();
+  addSaleItem();
+  document.getElementById('modal-sale').classList.add('open');
+};
+
+window.addSaleItem = function(){
+  saleItemCount++;
+  const id='si-'+saleItemCount;
+  const div=document.createElement('div');div.className='li-row';div.id=id;
+  div.innerHTML=`<input placeholder="Item (e.g. Catfish)" style="flex:2" class="si-name"/><input placeholder="Qty" type="number" min="0" step="0.1" style="flex:1" class="si-qty" oninput="calcSI('${id}')"/><input placeholder="Unit" style="flex:0.8" class="si-unit" value="kg"/><input placeholder="₱/unit" type="number" min="0" step="0.01" style="flex:1.2" class="si-price" oninput="calcSI('${id}')"/><input placeholder="Total" type="number" style="flex:1.2" class="si-total" readonly/><button class="li-rm" onclick="document.getElementById('${id}').remove()">✕</button>`;
+  document.getElementById('sale-items-list').appendChild(div);
+};
+
+window.calcSI = function(id){
+  const row=document.getElementById(id);if(!row)return;
+  const q=parseFloat(row.querySelector('.si-qty').value)||0;
+  const p=parseFloat(row.querySelector('.si-price').value)||0;
+  row.querySelector('.si-total').value=(q*p).toFixed(2);
+};
+
+window.saveSale = async function(){
+  const branch=document.getElementById('sale-branch').value;
+  const cust=document.getElementById('sale-cust').value.trim();
+  const date=document.getElementById('sale-date').value;
+  const notes=document.getElementById('sale-notes').value.trim();
+  if(!date){showToast('Please choose a date');return;}
+  const rows=document.querySelectorAll('#sale-items-list .li-row');
+  const items=[];
+  rows.forEach(row=>{
+    const name=row.querySelector('.si-name').value.trim();
+    const qty=parseFloat(row.querySelector('.si-qty').value)||0;
+    const unit=row.querySelector('.si-unit').value.trim()||'kg';
+    const price=parseFloat(row.querySelector('.si-price').value)||0;
+    if(name&&qty&&price) items.push({name,qty,unit,price,total:qty*price});
+  });
+  if(!items.length){showToast('Add at least one item with name, qty and price');return;}
+  const total=items.reduce((s,i)=>s+i.total,0);
+  const btn=document.getElementById('sale-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
+  try{
+    await addDoc(collection(db,'sales'),{
+      branch,customerName:cust||null,date,items,total,notes:notes||null,
+      createdAt:serverTimestamp(),submittedBy:auth.currentUser?.email?.split('@')[0]||'unknown'
+    });
+    document.getElementById('modal-sale').classList.remove('open');
+    showToast('✓ Sale saved!');
+  }catch(err){showToast('Error: '+err.message);}
+  finally{btn.disabled=false;btn.textContent='Save sale';}
+};
+
+window.deleteSale = async function(id){
+  if(!confirm('Delete this sale record?'))return;
+  try{await deleteDoc(doc(db,'sales',id));showToast('Sale deleted');}catch(err){showToast('Error: '+err.message);}
+};
 
 // ── TIMESHEET ──
 function renderEmployeeList(){
@@ -993,262 +1150,68 @@ function renderEmployeeList(){
   const now=new Date();const mPfx=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   const monthOT=timeLogs.filter(t=>(t.date||'').startsWith(mPfx)).reduce((s,t)=>s+Number(t.overtime||0),0);
   document.getElementById('ts-ot-total').textContent=monthOT.toFixed(1)+' hrs';
-  if(!employees.length){el.innerHTML='<div class="empty"><div class="empty-icon">👷</div><div class="empty-text">No employees yet</div>Tap + to add</div>';return;}
+  if(!employees.length){el.innerHTML='<div class="empty"><div class="empty-icon">👷</div><div class="empty-text">No employees yet</div>Tap "Add employee" to start</div>';return;}
   el.innerHTML=employees.map(emp=>{
     const empLogs=timeLogs.filter(t=>t.empId===emp.id);
-    const mLogs=empLogs.filter(t=>(t.date||'').startsWith(mPfx));
+    const now2=new Date();const mPfx2=now2.getFullYear()+'-'+String(now2.getMonth()+1).padStart(2,'0');
+    const mLogs=empLogs.filter(t=>(t.date||'').startsWith(mPfx2));
     const present=mLogs.filter(t=>t.status==='present'||t.status==='late'||t.status==='halfday').length;
     const absent=mLogs.filter(t=>t.status==='absent').length;
     const ot=mLogs.reduce((s,t)=>s+Number(t.overtime||0),0);
     const initials=emp.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-    // hide daily rate from manager
-    const rateInfo=isOwner()?`<div class="emp-sl">${fmt(emp.dailyRate||0)}/day</div>`:'';
-    return`<div class="emp-card" onclick="openEmpDetail('${emp.id}')"><div class="emp-avatar">${initials}</div><div class="emp-inf"><div class="emp-nm">${escHtml(emp.name)}</div><div class="emp-role-lbl">${escHtml(emp.role||'—')} · ${escHtml(emp.branch||'—')}</div></div><div class="emp-stats"><div class="emp-sv">${present}d present</div><div class="emp-sl">${absent} absent · ${ot.toFixed(1)}h OT</div>${rateInfo}</div></div>`;
+    return`<div class="emp-card" onclick="openEmpDetail('${emp.id}')">
+      <div class="emp-avatar">${initials}</div>
+      <div class="emp-inf"><div class="emp-nm">${escHtml(emp.name)}</div><div class="emp-role">${escHtml(emp.role||'—')} · ${escHtml(emp.branch||'—')}</div></div>
+      <div class="emp-stats"><div class="emp-sv">${present}d present</div><div class="emp-sl">${absent} absent · ${ot.toFixed(1)}h OT</div></div>
+    </div>`;
   }).join('');
 }
 
-function renderStaffTimesheetView(){
-  // Show this employee's own records
-  const myEmp=employees.find(e=>e.linkedEmail===currentUser?.email);
-  const nameEl=document.getElementById('my-qr-name');
-  const roleEl=document.getElementById('my-qr-role');
-  if(myEmp){
-    nameEl.textContent=myEmp.name;
-    roleEl.textContent=(myEmp.role||'Staff')+(myEmp.branch?' · '+myEmp.branch:'');
-    generateQR('my-qr-canvas', myEmp.id, 160);
-    // show own logs
-    const now=new Date();const mPfx=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-    const logs=timeLogs.filter(t=>t.empId===myEmp.id&&(t.date||'').startsWith(mPfx)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-    const el=document.getElementById('staff-ts-list');
-    el.innerHTML=logs.length?logs.map(log=>tsLogHTML(log)).join(''):'<div class="empty"><div class="empty-icon">🕐</div><div class="empty-text">No records this month</div></div>';
-  } else {
-    nameEl.textContent=userProfile?.name||currentUser?.email||'Staff';
-    roleEl.textContent='No employee record linked yet';
-    document.getElementById('staff-ts-list').innerHTML='<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Not linked to an employee</div>Ask the owner to link your account.</div>';
-  }
-}
-
-function tsLogHTML(log){
-  const dt=new Date(log.date+'T00:00:00');
-  const day=dt.getDate();const mon=dt.toLocaleDateString('en-PH',{month:'short'});
-  const stMap={present:'ts-p present',absent:'ts-a absent',late:'ts-l late',halfday:'ts-p half day'};
-  const stCls=stMap[log.status]||'ts-p';const stParts=stCls.split(' ');
-  const badgeCls=stParts[0];const badgeTxt=stParts.slice(1).join(' ')||log.status;
-  const timeStr=log.timeIn&&log.timeOut?`${log.timeIn} – ${log.timeOut}`:(log.timeIn?`In: ${log.timeIn}`:'');
-  const hrs=calcHours(log.timeIn,log.timeOut);
-  const otBadge=Number(log.overtime)>0?`<span class="ts-b ts-ot">+${Number(log.overtime)}h OT</span>`:'';
-  const canDel=isOwner()||isManager();
-  return`<div class="ts-row"><div class="ts-date"><div class="ts-dd">${day}</div><div class="ts-dm">${mon}</div></div><div class="ts-inf"><div class="ts-times"><span class="ts-b ${badgeCls}">${badgeTxt}</span> ${otBadge}</div><div class="ts-meta">${timeStr}${log.notes?` · ${escHtml(log.notes)}`:''}</div></div><div class="ts-hrs">${hrs?hrs+' h':''}<br>${canDel?`<button class="ib ed" style="margin-top:4px;" onclick="deleteTimeLog('${log.id}')">🗑</button>`:''}</div></div>`;
-}
-
-function calcHours(ti,to){if(!ti||!to)return null;const[h1,m1]=ti.split(':').map(Number);const[h2,m2]=to.split(':').map(Number);const mins=(h2*60+m2)-(h1*60+m1);if(mins<=0)return null;return(mins/60).toFixed(1);}
-
-// ── USER MANAGEMENT ──
-function renderUsers(){
-  const el=document.getElementById('users-list');
-  if(!userProfiles.length){el.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">No users yet</div>Tap "+ Add user"</div>';return;}
-  el.innerHTML=userProfiles.map(u=>{
-    const rMap={owner:'rb-owner 👑 Owner',manager:'rb-manager 🏢 Manager',staff:'rb-staff 👷 Staff'};
-    const rInfo=(rMap[u.role]||'rb-staff 👷 Staff').split(' ');
-    const cls=rInfo[0];const txt=rInfo.slice(1).join(' ');
-    return`<div class="er"><div class="ei" style="background:var(--sf2);font-size:20px;">👤</div><div class="en"><div class="ena">${escHtml(u.name||u.email)}</div><div class="em">${escHtml(u.email||'')} · <span class="bdg ${cls}">${txt}</span>${u.branch?` · ${escHtml(u.branch)}`:''}</div></div><div style="display:flex;gap:6px;"><button class="ib ed" onclick="openEditUser('${u.id}')">✏️</button><button class="ib ed" onclick="deleteUser('${u.id}')">🗑</button></div></div>`;
-  }).join('');
-  // branch summary
-  const brEl=document.getElementById('branch-summary');
-  const list=getBranchList();
-  brEl.innerHTML=list.length?list.map((b,i)=>`<div class="er"><div class="ei" style="background:var(--sf2)">🏗</div><div class="en"><div class="ena">${escHtml(b)}</div><div class="em">${employees.filter(e=>e.branch===b).length} employees</div></div></div>`).join(''):'<div class="empty"><div class="empty-icon">🏗</div><div class="empty-text">No branches yet</div></div>';
-}
-
-window.openAddUser=function(){
-  editingUserId=null;
-  document.getElementById('add-user-title').textContent='Add user';
-  document.getElementById('user-email').value='';
-  document.getElementById('user-display').value='';
-  document.getElementById('user-role').value='staff';
+window.openAddEmployee = function(id){
+  editingEmpId=id||null;
+  const emp=id?employees.find(e=>e.id===id):null;
+  document.getElementById('add-emp-title').textContent=emp?'Edit employee':'Add employee';
+  document.getElementById('emp-name').value=emp?.name||'';
+  document.getElementById('emp-role-inp').value=emp?.role||'';
+  document.getElementById('emp-rate').value=emp?.dailyRate??'';
+  document.getElementById('emp-reg-hrs').value=emp?.regularHours??8;
   renderBranchTabs();
-  document.getElementById('modal-add-user').classList.add('open');
+  setTimeout(()=>{ const sel=document.getElementById('emp-branch'); if(sel&&emp?.branch){sel.value=emp.branch;} },50);
+  document.getElementById('modal-add-emp').classList.add('open');
 };
-window.openEditUser=function(id){
-  editingUserId=id;
-  const u=userProfiles.find(x=>x.id===id);if(!u)return;
-  document.getElementById('add-user-title').textContent='Edit user';
-  document.getElementById('user-email').value=u.email||'';
-  document.getElementById('user-display').value=u.name||'';
-  document.getElementById('user-role').value=u.role||'staff';
-  renderBranchTabs();
-  setTimeout(()=>{const s=document.getElementById('user-branch-sel');if(s&&u.branch)s.value=u.branch;},50);
-  document.getElementById('modal-add-user').classList.add('open');
-};
-window.saveUser=async function(){
-  const email=document.getElementById('user-email').value.trim();
-  const name=document.getElementById('user-display').value.trim();
-  const roleVal=document.getElementById('user-role').value;
-  const branch=document.getElementById('user-branch-sel').value;
-  if(!email||!name){showToast('Please fill in email and name');return;}
-  const btn=document.getElementById('user-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
+
+window.saveEmployee = async function(){
+  const name=document.getElementById('emp-name').value.trim();
+  const role=document.getElementById('emp-role-inp').value.trim();
+  const branch=document.getElementById('emp-branch').value;
+  const rate=parseFloat(document.getElementById('emp-rate').value)||0;
+  const regHrs=parseFloat(document.getElementById('emp-reg-hrs').value)||8;
+  if(!name){showToast('Please enter employee name');return;}
+  const btn=document.getElementById('emp-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
   try{
-    const data={email,name,role:roleVal,branch:branch||null,updatedAt:serverTimestamp()};
-    if(editingUserId){await setDoc(doc(db,'userProfiles',editingUserId),data,{merge:true});}
-    else{await addDoc(collection(db,'userProfiles'),{...data,createdAt:serverTimestamp()});}
-    document.getElementById('modal-add-user').classList.remove('open');showToast('✓ User saved!');
+    const data={name,role:role||null,branch:branch||null,dailyRate:rate,regularHours:regHrs,updatedAt:serverTimestamp()};
+    if(editingEmpId){await setDoc(doc(db,'employees',editingEmpId),data,{merge:true});}
+    else{await addDoc(collection(db,'employees'),{...data,createdAt:serverTimestamp()});}
+    document.getElementById('modal-add-emp').classList.remove('open');showToast('✓ Employee saved!');
   }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Save user';}
-};
-window.deleteUser=async function(id){if(!confirm('Remove this user?'))return;try{await deleteDoc(doc(db,'userProfiles',id));showToast('User removed');}catch(err){showToast('Error: '+err.message);}};
-
-// ── BRANCH MGMT ──
-window.openBranchMgmt=function(){renderBranchMgmt();document.getElementById('modal-branches').classList.add('open');};
-function renderBranchMgmt(){
-  const list=getBranchList();
-  const el=document.getElementById('branch-list-mgmt');
-  el.innerHTML=list.map(b=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd);"><span style="flex:1;font-size:14px;font-weight:500;">${escHtml(b)}</span><button class="ib ed" onclick="deleteBranch('${escHtml(b)}')">🗑</button></div>`).join('')||'<div style="font-size:13px;color:var(--t3);padding:8px 0;">No branches yet</div>';
-}
-window.addBranch=async function(){
-  const nm=document.getElementById('new-branch-name').value.trim();
-  if(!nm){showToast('Enter a branch name');return;}
-  const list=[...getBranchList()];if(list.includes(nm)){showToast('Already exists');return;}
-  list.push(nm);
-  try{await setDoc(doc(db,'settings','branches'),{list,updatedAt:serverTimestamp()},{merge:true});document.getElementById('new-branch-name').value='';showToast('✓ Branch added!');}catch(err){showToast('Error: '+err.message);}
-};
-window.deleteBranch=async function(name){
-  if(!confirm('Remove branch "'+name+'"?'))return;
-  const list=getBranchList().filter(b=>b!==name);
-  try{await setDoc(doc(db,'settings','branches'),{list,updatedAt:serverTimestamp()},{merge:true});showToast('Branch removed');renderBranchMgmt();}catch(err){showToast('Error: '+err.message);}
+  finally{btn.disabled=false;btn.textContent='Save employee';}
 };
 
-// ── QR CODE ──
-function generateQR(canvasId, empId, size=200){
-  const canvas=document.getElementById(canvasId);if(!canvas)return;
-  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
-  canvas.width=size;canvas.height=size;
-  // URL = app URL + ?emp=ID so scanning it opens the app and auto-selects the employee
-  const url=window.location.href.split('?')[0]+'?emp='+empId;
-  try{
-    new QRCode(canvas,{text:url,width:size,height:size,colorDark:'#0F6E56',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
-  }catch(e){
-    // fallback: draw a simple label
-    ctx.fillStyle='#0F6E56';ctx.font='12px DM Sans';ctx.textAlign='center';ctx.fillText('QR: '+empId.slice(0,8),size/2,size/2);
-  }
-}
-window.printEmpQR=function(){
-  const emp=employees.find(e=>e.id===currentEmpId);if(!emp)return;
-  const canvas=document.getElementById('emp-qr-canvas');if(!canvas)return;
-  const win=window.open('','_blank');
-  win.document.write(`<html><body style="display:flex;flex-direction:column;align-items:center;padding:40px;font-family:DM Sans,sans-serif;">
-    <div style="font-size:32px;margin-bottom:8px;">🐟</div>
-    <div style="font-size:20px;font-weight:700;margin-bottom:4px;">${escHtml(emp.name)}</div>
-    <div style="font-size:14px;color:#5A5A56;margin-bottom:20px;">${escHtml(emp.role||'Staff')} · ${escHtml(emp.branch||'—')}</div>
-    <img src="${canvas.toDataURL()}" style="width:200px;height:200px;border:2px solid #0F6E56;border-radius:12px;"/>
-    <div style="margin-top:16px;font-size:12px;color:#9A9A94;">Scan QR code to clock in/out</div>
-    <div style="margin-top:4px;font-size:11px;color:#9A9A94;">CatFish Farm</div>
-    <script>window.print();<\/script>
-  </body></html>`);
-};
-
-// QR scan on login (URL param ?emp=ID)
-function checkQRLogin(){
-  const params=new URLSearchParams(window.location.search);
-  const empId=params.get('emp');
-  if(empId) window._qrEmpId=empId;
-}
-
-// ── CLOCK IN/OUT ──
-let clockTimer=null;
-function startClock(){
-  const tick=()=>{
-    const now=new Date();
-    document.getElementById('clk-time').textContent=now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    document.getElementById('clk-date').textContent=now.toLocaleDateString('en-PH',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  };
-  tick();clockTimer=setInterval(tick,1000);
-}
-function stopClock(){if(clockTimer){clearInterval(clockTimer);clockTimer=null;}}
-
-function openClockScreen(){
-  const emp=getMyEmployee();
-  if(!emp&&!window._qrEmpId){showToast('No employee record found');return;}
-  const empToUse=emp||employees.find(e=>e.id===window._qrEmpId);
-  if(!empToUse){showToast('Employee not found');return;}
-  const initials=empToUse.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  document.getElementById('clk-avatar').textContent=initials;
-  document.getElementById('clk-name').textContent=empToUse.name;
-  document.getElementById('clk-role').textContent=(empToUse.role||'Staff')+(empToUse.branch?' · '+empToUse.branch:'');
-  // check today's log
-  const today=new Date().toISOString().split('T')[0];
-  const todayLog=timeLogs.find(t=>t.empId===empToUse.id&&t.date===today);
-  updateClockUI(todayLog, empToUse.id);
-  startClock();
-  document.getElementById('clock-screen').classList.add('open');
-  document.getElementById('app').classList.add('hidden');
-  document.getElementById('fab').style.display='none';
-}
-
-function updateClockUI(todayLog, empId){
-  const inBtn=document.getElementById('clk-in-btn');
-  const outBtn=document.getElementById('clk-out-btn');
-  const statusEl=document.getElementById('clk-status-val');
-  if(!todayLog){
-    statusEl.textContent='Not clocked in yet';
-    inBtn.classList.remove('disabled');outBtn.classList.add('disabled');
-  } else if(todayLog.timeIn&&!todayLog.timeOut){
-    statusEl.textContent='Clocked in at '+todayLog.timeIn;
-    inBtn.classList.add('disabled');outBtn.classList.remove('disabled');
-  } else if(todayLog.timeOut){
-    statusEl.textContent=`In: ${todayLog.timeIn} · Out: ${todayLog.timeOut}`;
-    inBtn.classList.add('disabled');outBtn.classList.add('disabled');
-  }
-}
-
-window.doClockIn=async function(){
-  const emp=getMyEmployee()||employees.find(e=>e.id===window._qrEmpId);
+window.openEmpDetail = function(id){
+  currentEmpId=id;
+  const emp=employees.find(e=>e.id===id);
   if(!emp)return;
-  const now=new Date();
-  const date=now.toISOString().split('T')[0];
-  const timeIn=now.toTimeString().slice(0,5);
-  try{
-    await addDoc(collection(db,'timeLogs'),{empId:emp.id,date,status:'present',timeIn,timeOut:null,overtime:0,notes:null,createdAt:serverTimestamp(),createdBy:currentUser?.email||'qr'});
-    showToast('✅ Clocked in at '+timeIn);
-    const todayLog=timeLogs.find(t=>t.empId===emp.id&&t.date===date)||{timeIn,timeOut:null,date};
-    updateClockUI({...todayLog,timeIn,timeOut:null},emp.id);
-  }catch(err){showToast('Error: '+err.message);}
-};
-
-window.doClockOut=async function(){
-  const emp=getMyEmployee()||employees.find(e=>e.id===window._qrEmpId);
-  if(!emp)return;
-  const now=new Date();const date=now.toISOString().split('T')[0];const timeOut=now.toTimeString().slice(0,5);
-  const todayLog=timeLogs.find(t=>t.empId===emp.id&&t.date===date&&t.timeIn&&!t.timeOut);
-  if(!todayLog){showToast('No clock-in found for today');return;}
-  try{
-    await setDoc(doc(db,'timeLogs',todayLog.id),{timeOut},{merge:true});
-    showToast('🔴 Clocked out at '+timeOut);
-    updateClockUI({...todayLog,timeOut},emp.id);
-    setTimeout(()=>skipClock(),1500);
-  }catch(err){showToast('Error: '+err.message);}
-};
-
-window.skipClock=function(){
-  stopClock();
-  document.getElementById('clock-screen').classList.remove('open');
-  document.getElementById('app').classList.remove('hidden');
-  document.getElementById('fab').style.display='flex';
-};
-
-function getMyEmployee(){return employees.find(e=>e.linkedEmail===currentUser?.email);}
-
-// ── EMPLOYEE DETAIL ──
-window.openEmpDetail=function(id){
-  currentEmpId=id;const emp=employees.find(e=>e.id===id);if(!emp)return;
   document.getElementById('emp-detail-name').textContent=emp.name;
   document.getElementById('emp-detail-role').textContent=(emp.role||'')+(emp.branch?' · '+emp.branch:'');
-  document.getElementById('emp-ts-title').textContent="Records";
-  // salary visibility: only owner sees it
+  document.getElementById('emp-ts-title').textContent=emp.name+"'s records";
   renderEmpDetail(id);
-  generateQR('emp-qr-canvas',id,160);
   document.getElementById('emp-detail-screen').classList.add('open');
 };
-window.closeEmpDetail=function(){document.getElementById('emp-detail-screen').classList.remove('open');currentEmpId=null;};
-window.openEditEmployee=function(){if(currentEmpId)openAddEmployee(currentEmpId);};
+
+window.closeEmpDetail = function(){
+  document.getElementById('emp-detail-screen').classList.remove('open');
+  currentEmpId=null;
+};
 
 function renderEmpDetail(empId){
   const emp=employees.find(e=>e.id===empId);
@@ -1259,232 +1222,131 @@ function renderEmpDetail(empId){
   const absent=mLogs.filter(t=>t.status==='absent').length;
   const late=mLogs.filter(t=>t.status==='late').length;
   const ot=mLogs.reduce((s,t)=>s+Number(t.overtime||0),0);
-  document.getElementById('emp-sum-grid').innerHTML=`
-    <div class="es-c"><div class="es-v" style="color:var(--g)">${present}</div><div class="es-l">Present</div></div>
-    <div class="es-c"><div class="es-v" style="color:var(--r)">${absent}</div><div class="es-l">Absent</div></div>
-    <div class="es-c"><div class="es-v" style="color:var(--am)">${late}</div><div class="es-l">Late</div></div>
-    <div class="es-c"><div class="es-v" style="color:var(--bl)">${ot.toFixed(1)}</div><div class="es-l">OT hrs</div></div>`;
+  const sumEl=document.getElementById('emp-sum-grid');
+  sumEl.innerHTML=`
+    <div class="es-c"><div class="es-v" style="color:var(--green)">${present}</div><div class="es-l">Present</div></div>
+    <div class="es-c"><div class="es-v" style="color:var(--red)">${absent}</div><div class="es-l">Absent</div></div>
+    <div class="es-c"><div class="es-v" style="color:var(--amber)">${late}</div><div class="es-l">Late</div></div>
+    <div class="es-c"><div class="es-v" style="color:var(--blue)">${ot.toFixed(1)}</div><div class="es-l">OT hrs</div></div>`;
   const listEl=document.getElementById('emp-ts-list');
-  listEl.innerHTML=logs.length?logs.map(log=>tsLogHTML(log)).join(''):'<div class="empty"><div class="empty-icon">🕐</div><div class="empty-text">No records yet</div></div>';
+  if(!logs.length){listEl.innerHTML='<div class="empty"><div class="empty-icon">🕐</div><div class="empty-text">No records yet</div>Tap "+ Log time" to add attendance</div>';return;}
+  listEl.innerHTML=logs.map(log=>{
+    const dt=new Date(log.date+'T00:00:00');
+    const day=dt.getDate();const mon=dt.toLocaleDateString('en-PH',{month:'short'});
+    const stMap={present:'ts-p present',absent:'ts-a absent',late:'ts-l late',halfday:'ts-p half day'};
+    const stCls=stMap[log.status]||'ts-p';const stParts=stCls.split(' ');
+    const badgeCls=stParts[0];const badgeTxt=stParts.slice(1).join(' ')||log.status;
+    const timeStr=log.timeIn&&log.timeOut?`${log.timeIn} – ${log.timeOut}`:(log.timeIn?`In: ${log.timeIn}`:'');
+    const hrs=calcHours(log.timeIn,log.timeOut);
+    const otBadge=Number(log.overtime)>0?`<span class="ts-b ts-ot">+${Number(log.overtime)}h OT</span>`:'';
+    return`<div class="ts-row">
+      <div class="ts-date"><div class="ts-dd">${day}</div><div class="ts-dm">${mon}</div></div>
+      <div class="ts-inf">
+        <div class="ts-times"><span class="ts-b ${badgeCls}">${badgeTxt}</span> ${otBadge}</div>
+        <div class="ts-meta">${timeStr}${log.notes?` · ${escHtml(log.notes)}`:''}</div>
+      </div>
+      <div class="ts-hrs">${hrs?hrs+' hrs':''}<br><button class="ib ed" style="margin-top:4px;" onclick="deleteTimeLog('${log.id}')">🗑</button></div>
+    </div>`;
+  }).join('');
 }
 
-window.openAddEmployee=function(id){
-  editingEmpId=id||null;
-  const emp=id?employees.find(e=>e.id===id):null;
-  document.getElementById('add-emp-title').textContent=emp?'Edit employee':'Add employee';
-  document.getElementById('emp-name').value=emp?.name||'';
-  document.getElementById('emp-role-inp').value=emp?.role||'';
-  document.getElementById('emp-rate').value=emp?.dailyRate??'';
-  document.getElementById('emp-reg-hrs').value=emp?.regularHours??8;
-  renderBranchTabs();
-  setTimeout(()=>{const sel=document.getElementById('emp-branch');if(sel&&emp?.branch)sel.value=emp.branch;},50);
-  document.getElementById('modal-add-emp').classList.add('open');
-};
+function calcHours(timeIn, timeOut){
+  if(!timeIn||!timeOut)return null;
+  const [h1,m1]=timeIn.split(':').map(Number);
+  const [h2,m2]=timeOut.split(':').map(Number);
+  const mins=(h2*60+m2)-(h1*60+m1);
+  if(mins<=0)return null;
+  return (mins/60).toFixed(1);
+}
 
-window.saveEmployee=async function(){
-  const name=document.getElementById('emp-name').value.trim();
-  const empRole=document.getElementById('emp-role-inp').value.trim();
-  const branch=document.getElementById('emp-branch').value;
-  const rate=parseFloat(document.getElementById('emp-rate').value)||0;
-  const regHrs=parseFloat(document.getElementById('emp-reg-hrs').value)||8;
-  if(!name){showToast('Please enter employee name');return;}
-  const btn=document.getElementById('emp-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
-  try{
-    const data={name,role:empRole||null,branch:branch||null,dailyRate:rate,regularHours:regHrs,updatedAt:serverTimestamp()};
-    if(editingEmpId){
-      await setDoc(doc(db,'employees',editingEmpId),data,{merge:true});
-      if(isManager()) await logManagerChange('Edited employee',name);
-    }else{
-      await addDoc(collection(db,'employees'),{...data,createdAt:serverTimestamp()});
-      if(isManager()) await logManagerChange('Added employee',name);
-    }
-    document.getElementById('modal-add-emp').classList.remove('open');showToast('✓ Employee saved!');
-  }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Save employee';}
-};
-
-window.openLogTime=function(){
+window.openLogTime = function(){
   if(!currentEmpId)return;
   const emp=employees.find(e=>e.id===currentEmpId);
   document.getElementById('lt-emp-name').textContent=emp?emp.name:'Employee';
   document.getElementById('lt-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('lt-status').value='present';
-  document.getElementById('lt-in').value='07:00';document.getElementById('lt-out').value='16:00';
-  document.getElementById('lt-ot').value='';document.getElementById('lt-notes').value='';
+  document.getElementById('lt-in').value='07:00';
+  document.getElementById('lt-out').value='16:00';
+  document.getElementById('lt-ot').value='';
+  document.getElementById('lt-notes').value='';
   onLtStatusChange();
   document.getElementById('modal-log-time').classList.add('open');
 };
-window.onLtStatusChange=function(){document.getElementById('lt-time-group').style.display=document.getElementById('lt-status').value==='absent'?'none':'block';};
-window.saveTimeLog=async function(){
-  const date=document.getElementById('lt-date').value;const status=document.getElementById('lt-status').value;
-  const timeIn=document.getElementById('lt-in').value;const timeOut=document.getElementById('lt-out').value;
-  const ot=parseFloat(document.getElementById('lt-ot').value)||0;const notes=document.getElementById('lt-notes').value.trim();
-  if(!date||!currentEmpId){showToast('Missing date or employee');return;}
+
+window.onLtStatusChange = function(){
+  const s=document.getElementById('lt-status').value;
+  document.getElementById('lt-time-group').style.display=(s==='absent')?'none':'block';
+};
+
+window.saveTimeLog = async function(){
+  const date=document.getElementById('lt-date').value;
+  const status=document.getElementById('lt-status').value;
+  const timeIn=document.getElementById('lt-in').value;
+  const timeOut=document.getElementById('lt-out').value;
+  const ot=parseFloat(document.getElementById('lt-ot').value)||0;
+  const notes=document.getElementById('lt-notes').value.trim();
+  if(!date){showToast('Please choose a date');return;}
+  if(!currentEmpId){showToast('No employee selected');return;}
   const btn=document.getElementById('lt-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
   try{
-    const emp=employees.find(e=>e.id===currentEmpId);
-    await addDoc(collection(db,'timeLogs'),{empId:currentEmpId,date,status,timeIn:status!=='absent'?timeIn:null,timeOut:status!=='absent'?timeOut:null,overtime:ot,notes:notes||null,createdAt:serverTimestamp(),createdBy:currentUser?.email||'unknown'});
-    if(isManager()) await logManagerChange('Logged time for '+emp?.name, date+' '+status);
-    document.getElementById('modal-log-time').classList.remove('open');showToast('✓ Attendance logged!');
-    if(currentEmpId)renderEmpDetail(currentEmpId);
+    await addDoc(collection(db,'timeLogs'),{
+      empId:currentEmpId,date,status,
+      timeIn:status!=='absent'?timeIn:null,
+      timeOut:status!=='absent'?timeOut:null,
+      overtime:ot,notes:notes||null,
+      createdAt:serverTimestamp(),createdBy:auth.currentUser?.email||'unknown'
+    });
+    document.getElementById('modal-log-time').classList.remove('open');
+    showToast('✓ Attendance logged!');
+    renderEmpDetail(currentEmpId);
   }catch(err){showToast('Error: '+err.message);}
   finally{btn.disabled=false;btn.textContent='Save record';}
 };
-window.deleteTimeLog=async function(id){if(!confirm('Delete this record?'))return;try{await deleteDoc(doc(db,'timeLogs',id));showToast('Record deleted');if(currentEmpId)renderEmpDetail(currentEmpId);}catch(err){showToast('Error: '+err.message);}};
 
-// ── INVENTORY ACTIONS ──
-window.openAddItem=function(id){
-  editingItemId=id||null;const item=id?invItems.find(i=>i.id===id):null;
-  document.getElementById('add-item-title').textContent=item?'Edit item':'Add inventory item';
-  document.getElementById('item-name').value=item?.name||'';document.getElementById('item-cat').value=item?.category||'catfish';
-  document.getElementById('item-qty').value=item?.qty??'';document.getElementById('item-unit').value=item?.unit||'kg';
-  document.getElementById('item-kg').value=item?.kg??'';document.getElementById('item-low').value=item?.lowAlert??'';
-  document.getElementById('item-notes').value=item?.notes||'';onItemCatChange();
-  document.getElementById('modal-add-item').classList.add('open');
+window.deleteTimeLog = async function(id){
+  if(!confirm('Delete this time record?'))return;
+  try{await deleteDoc(doc(db,'timeLogs',id));showToast('Record deleted');if(currentEmpId)renderEmpDetail(currentEmpId);}catch(err){showToast('Error: '+err.message);}
 };
-window.onItemCatChange=function(){document.getElementById('item-weight-group').style.display=document.getElementById('item-cat').value==='catfish'?'block':'none';};
-window.saveItem=async function(){
-  const name=document.getElementById('item-name').value.trim();const cat=document.getElementById('item-cat').value;
-  const qty=parseFloat(document.getElementById('item-qty').value)||0;const unit=document.getElementById('item-unit').value.trim()||'pcs';
-  const kg=parseFloat(document.getElementById('item-kg').value)||0;const low=parseFloat(document.getElementById('item-low').value)||0;
-  const notes=document.getElementById('item-notes').value.trim();
-  if(!name){showToast('Please enter item name');return;}
-  const btn=document.getElementById('item-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
-  try{
-    const data={name,category:cat,qty,unit,kg:cat==='catfish'?kg:0,lowAlert:low,notes:notes||null,updatedAt:serverTimestamp()};
-    if(editingItemId){
-      await setDoc(doc(db,'invItems',editingItemId),data,{merge:true});
-      if(isManager()) await logManagerChange('Edited inventory item',name);
-    }else{
-      await addDoc(collection(db,'invItems'),{...data,createdAt:serverTimestamp()});
-      if(isManager()) await logManagerChange('Added inventory item',name);
-    }
-    document.getElementById('modal-add-item').classList.remove('open');showToast('✓ Item saved!');
-  }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Save item';}
-};
-window.openMovement=function(itemId,dir){
-  currentMvItemId=itemId;const item=invItems.find(i=>i.id===itemId);
-  document.getElementById('mv-title').textContent=dir==='in'?'📥 Stock IN':'📤 Stock OUT';
-  document.getElementById('mv-item-name').textContent=item?item.name:'';
-  document.getElementById('mv-type').value=dir;
-  document.getElementById('mv-qty').value='';document.getElementById('mv-kg').value='';document.getElementById('mv-reason').value='';
-  document.getElementById('mv-date').value=new Date().toISOString().split('T')[0];
-  document.getElementById('mv-kg-group').style.display=item?.category==='catfish'?'block':'none';
-  document.getElementById('modal-movement').classList.add('open');
-};
-window.saveMovement=async function(){
-  const qty=parseFloat(document.getElementById('mv-qty').value)||0;const type=document.getElementById('mv-type').value;
-  const date=document.getElementById('mv-date').value;const reason=document.getElementById('mv-reason').value.trim();
-  const kg=parseFloat(document.getElementById('mv-kg').value)||0;
-  if(!qty){showToast('Please enter quantity');return;}if(!date){showToast('Please choose a date');return;}
-  const btn=document.getElementById('mv-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
-  try{
-    const item=invItems.find(i=>i.id===currentMvItemId);
-    await addDoc(collection(db,'movements'),{itemId:currentMvItemId,itemName:item?.name||'',type,qty,kg:item?.category==='catfish'?kg:0,date,reason:reason||null,createdAt:serverTimestamp(),createdBy:currentUser?.email?.split('@')[0]||'unknown'});
-    if(item){let nq=Number(item.qty)||0,nk=Number(item.kg)||0;if(type==='in'){nq+=qty;nk+=kg;}else if(type==='out'){nq=Math.max(0,nq-qty);nk=Math.max(0,nk-kg);}else if(type==='adjustment'){nq=qty;nk=kg;}await setDoc(doc(db,'invItems',item.id),{qty:nq,kg:nk,updatedAt:serverTimestamp()},{merge:true});}
-    if(isManager()) await logManagerChange('Stock '+type+' — '+item?.name, qty+' '+item?.unit);
-    document.getElementById('modal-movement').classList.remove('open');showToast('✓ Movement saved!');
-  }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Save movement';}
-};
-window.deleteItem=async function(id){if(!confirm('Delete this item?'))return;try{await deleteDoc(doc(db,'invItems',id));showToast('Item deleted');}catch(err){showToast('Error: '+err.message);}};
 
-// ── SALES ACTIONS ──
-window.openNewSale=function(){
-  saleItemCount=0;document.getElementById('sale-items-list').innerHTML='';
-  document.getElementById('sale-cust').value='';document.getElementById('sale-notes').value='';
-  document.getElementById('sale-date').value=new Date().toISOString().split('T')[0];
-  renderBranchTabs();addSaleItem();
-  document.getElementById('modal-sale').classList.add('open');
-};
-window.addSaleItem=function(){
-  saleItemCount++;const id='si-'+saleItemCount;const div=document.createElement('div');div.className='li-row';div.id=id;
-  div.innerHTML=`<input placeholder="Item" style="flex:2" class="si-name"/><input placeholder="Qty" type="number" min="0" step="0.1" style="flex:1" class="si-qty" oninput="calcSI('${id}')"/><input placeholder="Unit" style="flex:0.8" class="si-unit" value="kg"/><input placeholder="₱/u" type="number" min="0" step="0.01" style="flex:1.2" class="si-price" oninput="calcSI('${id}')"/><input placeholder="Total" type="number" style="flex:1.2" class="si-total" readonly/><button class="li-rm" onclick="document.getElementById('${id}').remove()">✕</button>`;
-  document.getElementById('sale-items-list').appendChild(div);
-};
-window.calcSI=function(id){const row=document.getElementById(id);if(!row)return;const q=parseFloat(row.querySelector('.si-qty').value)||0,p=parseFloat(row.querySelector('.si-price').value)||0;row.querySelector('.si-total').value=(q*p).toFixed(2);};
-window.saveSale=async function(){
-  const branch=document.getElementById('sale-branch').value;const cust=document.getElementById('sale-cust').value.trim();
-  const date=document.getElementById('sale-date').value;const notes=document.getElementById('sale-notes').value.trim();
-  if(!date){showToast('Please choose a date');return;}
-  const rows=document.querySelectorAll('#sale-items-list .li-row');const items=[];
-  rows.forEach(row=>{const name=row.querySelector('.si-name').value.trim();const qty=parseFloat(row.querySelector('.si-qty').value)||0;const unit=row.querySelector('.si-unit').value.trim()||'kg';const price=parseFloat(row.querySelector('.si-price').value)||0;if(name&&qty&&price)items.push({name,qty,unit,price,total:qty*price});});
-  if(!items.length){showToast('Add at least one item');return;}
-  const total=items.reduce((s,i)=>s+i.total,0);
-  const btn=document.getElementById('sale-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
-  try{
-    await addDoc(collection(db,'sales'),{branch,customerName:cust||null,date,items,total,notes:notes||null,createdAt:serverTimestamp(),submittedBy:currentUser?.email?.split('@')[0]||'unknown',createdBy:currentUser?.email||''});
-    if(isManager()) await logManagerChange('Added sale record',branch+' '+fmt(total));
-    document.getElementById('modal-sale').classList.remove('open');showToast('✓ Sale saved!');
-  }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Save sale';}
-};
-window.deleteSale=async function(id){if(!confirm('Delete this sale?'))return;try{await deleteDoc(doc(db,'sales',id));showToast('Sale deleted');}catch(err){showToast('Error: '+err.message);}};
+// ── NAV ──
+document.querySelectorAll('.nb').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('screen-'+btn.dataset.s).classList.add('active');
+  });
+});
 
-// ── INVOICE ACTIONS ──
-let invLineCount=0;
-window.openNewInvoice=function(){
-  invLineCount=0;document.getElementById('line-items-list').innerHTML='';
-  document.getElementById('inv-cust').value='';document.getElementById('inv-addr').value='';
-  document.getElementById('inv-notes').value='';document.getElementById('inv-date').value=new Date().toISOString().split('T')[0];
-  addLineItem();document.getElementById('modal-invoice').classList.add('open');
-};
-window.addLineItem=function(){
-  invLineCount++;const id='li-'+invLineCount;const div=document.createElement('div');div.className='li-row';div.id=id;
-  div.innerHTML=`<input placeholder="Item" style="flex:2" class="li-name"/><input placeholder="Qty" type="number" min="0" step="0.1" style="flex:1" class="li-qty" oninput="calcLT('${id}')"/><input placeholder="Unit" style="flex:0.8" class="li-unit" value="kg"/><input placeholder="₱/u" type="number" min="0" step="0.01" style="flex:1.2" class="li-price" oninput="calcLT('${id}')"/><input placeholder="Total" type="number" style="flex:1.2" class="li-total" readonly/><button class="li-rm" onclick="document.getElementById('${id}').remove()">✕</button>`;
-  document.getElementById('line-items-list').appendChild(div);
-};
-window.calcLT=function(id){const row=document.getElementById(id);if(!row)return;const q=parseFloat(row.querySelector('.li-qty').value)||0,p=parseFloat(row.querySelector('.li-price').value)||0;row.querySelector('.li-total').value=(q*p).toFixed(2);};
-window.saveInvoice=async function(){
-  const cust=document.getElementById('inv-cust').value.trim();const addr=document.getElementById('inv-addr').value.trim();
-  const date=document.getElementById('inv-date').value;const notes=document.getElementById('inv-notes').value.trim();
-  if(!cust||!date){showToast('Please fill in customer and date');return;}
-  const rows=document.querySelectorAll('#line-items-list .li-row');const lineItems=[];
-  rows.forEach(row=>{const name=row.querySelector('.li-name').value.trim();const qty=parseFloat(row.querySelector('.li-qty').value)||0;const unit=row.querySelector('.li-unit').value.trim()||'kg';const price=parseFloat(row.querySelector('.li-price').value)||0;if(name&&qty&&price)lineItems.push({name,qty,unit,price,total:qty*price});});
-  if(!lineItems.length){showToast('Add at least one item');return;}
-  const total=lineItems.reduce((s,i)=>s+i.total,0);const invoiceNo=invoices.length+1;
-  const btn=document.getElementById('inv-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
-  try{
-    const ref=await addDoc(collection(db,'invoices'),{customerName:cust,customerAddress:addr||null,date,lineItems,total,notes:notes||null,invoiceNo,status:'pending',createdAt:serverTimestamp(),createdBy:currentUser?.email||'unknown'});
-    if(isManager()) await logManagerChange('Created invoice for '+cust,fmt(total));
-    document.getElementById('modal-invoice').classList.remove('open');showToast('✓ Invoice created!');
-    setTimeout(()=>viewInvoice(ref.id),400);
-  }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Generate Invoice';}
-};
-window.viewInvoice=function(id){
-  const inv=invoices.find(i=>i.id===id);if(!inv)return;
-  currentInvoiceId=id;
-  document.getElementById('ip-no').textContent='INVOICE #'+String(inv.invoiceNo||'').padStart(3,'0');
-  document.getElementById('ip-date').textContent='Date: '+fmtDate(inv.date);
-  document.getElementById('ip-cust-name').textContent=inv.customerName||'';
-  document.getElementById('ip-cust-addr').textContent=inv.customerAddress||'';
-  const tbody=document.getElementById('ip-line-items');let sub=0;
-  tbody.innerHTML=(inv.lineItems||[]).map(li=>{sub+=Number(li.total)||0;return`<tr><td>${escHtml(li.name)}</td><td>${Number(li.qty).toFixed(2)}</td><td>${escHtml(li.unit||'')}</td><td>${fmt(li.price)}</td><td>${fmt(li.total)}</td></tr>`;}).join('');
-  document.getElementById('ip-subtotal').textContent=fmt(sub);document.getElementById('ip-total').textContent=fmt(inv.total);
-  const nb=document.getElementById('ip-notes-box');if(inv.notes){nb.style.display='block';document.getElementById('ip-notes').textContent=inv.notes;}else{nb.style.display='none';}
-  const isPaid=inv.status==='paid';
-  document.getElementById('st-paid').className='st-btn'+(isPaid?' ap':'');
-  document.getElementById('st-pending').className='st-btn'+(!isPaid?' apd':'');
-  document.getElementById('invoice-print').classList.add('open');
-};
-window.setInvoiceStatus=async function(status){
-  if(!currentInvoiceId)return;
-  try{await setDoc(doc(db,'invoices',currentInvoiceId),{status},{merge:true});showToast(status==='paid'?'✅ Marked as paid':'⏳ Marked as pending');document.getElementById('st-paid').className='st-btn'+(status==='paid'?' ap':'');document.getElementById('st-pending').className='st-btn'+(status==='pending'?' apd':'');}catch(err){showToast('Error: '+err.message);}
-};
-window.closeInvoicePrint=function(){document.getElementById('invoice-print').classList.remove('open');};
-window.shareInvoice=function(){if(navigator.share){navigator.share({title:'CatFish Invoice',url:window.location.href}).catch(()=>{});}else{showToast('Use Print → Save as PDF to share');}};
+document.getElementById('cat-chips').addEventListener('click',e=>{
+  const chip=e.target.closest('.chip');if(!chip)return;
+  document.querySelectorAll('#cat-chips .chip').forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');renderExpenses();
+});
 
-// ── ENTRY ACTIONS ──
-window.viewReceipt=function(id){const e=entries.find(x=>x.id===id);if(!e)return;document.getElementById('rv-title').textContent=e.description||'Receipt';const img=document.getElementById('receipt-viewer-img');img.style.display=e.receipt&&e.receipt.startsWith('data:image')?'block':'none';if(img.style.display==='block')img.src=e.receipt;const info=getInfo(e);document.getElementById('rv-info').innerHTML=`<b>Amount:</b> ${fmt(e.amount)}<br><b>Date:</b> ${fmtDate(e.date)}<br><b>Type:</b> ${info.label}${e.notes?'<br><b>Notes:</b> '+escHtml(e.notes):''}`;document.getElementById('modal-receipt').classList.add('open');};
-window.deleteEntry=async function(id){if(!confirm('Delete this entry?'))return;try{await deleteDoc(doc(db,'entries',id));showToast('Entry deleted');}catch(err){showToast('Error: '+err.message);}};
+document.getElementById('fab').addEventListener('click',()=>{
+  const active=document.querySelector('.nb.active')?.dataset.s;
+  if(active==='inventory'){openAddItem();return;}
+  if(active==='invoices'){openNewInvoice();return;}
+  if(active==='sales'){openNewSale();return;}
+  if(active==='timesheet'){openAddEmployee();return;}
+  if(active==='receipts'){/* fall through to entry modal */}
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('e-date').value=today;
+  document.getElementById('e-desc').value='';document.getElementById('e-amount').value='';
+  document.getElementById('e-notes').value='';document.getElementById('e-preview').style.display='none';
+  document.getElementById('e-fname').textContent='';document.getElementById('file-inp').value='';
+  pendingFile=null;window.onTypeChange();
+  document.getElementById('modal-entry').classList.add('open');
+});
+
 window.onTypeChange=function(){document.getElementById('cat-fg').style.display=document.getElementById('e-type').value==='expense'?'block':'none';};
 window.closeEntry=function(){document.getElementById('modal-entry').classList.remove('open');};
+
 window.onFilePick=function(ev){
   const file=ev.target.files[0];if(!file)return;
-  const fnEl=document.getElementById('e-fname'),previewImg=document.getElementById('e-preview');
-  if(!file.type.startsWith('image/')){fnEl.textContent='Non-image file cannot be attached';return;}
+  const fnEl=document.getElementById('e-fname');const previewImg=document.getElementById('e-preview');
+  if(!file.type.startsWith('image/')){fnEl.textContent=file.name+' (non-image, cannot attach)';return;}
   fnEl.textContent='⏳ Compressing...';previewImg.style.display='none';
   const reader=new FileReader();
   reader.onload=function(ev2){
@@ -1498,147 +1360,124 @@ window.onFilePick=function(ev){
       while(compressed.length>700000&&quality>0.2){quality-=0.1;compressed=canvas.toDataURL('image/jpeg',quality);}
       pendingFile=compressed;previewImg.src=compressed;previewImg.style.display='block';
       fnEl.textContent=`✓ Photo ready (${Math.round(compressed.length*0.75/1024)} KB)`;
-    };original.src=ev2.target.result;
-  };reader.readAsDataURL(file);
+    };
+    original.src=ev2.target.result;
+  };
+  reader.readAsDataURL(file);
 };
+
 window.saveEntry=async function(){
-  const type=document.getElementById('e-type').value;const desc=document.getElementById('e-desc').value.trim();
-  const amount=parseFloat(document.getElementById('e-amount').value);const date=document.getElementById('e-date').value;
-  const cat=document.getElementById('e-cat').value;const notes=document.getElementById('e-notes').value.trim();
-  if(!desc){showToast('Please enter a description');return;}if(!amount||amount<=0){showToast('Please enter a valid amount');return;}if(!date){showToast('Please choose a date');return;}
+  const type=document.getElementById('e-type').value;
+  const desc=document.getElementById('e-desc').value.trim();
+  const amount=parseFloat(document.getElementById('e-amount').value);
+  const date=document.getElementById('e-date').value;
+  const cat=document.getElementById('e-cat').value;
+  const notes=document.getElementById('e-notes').value.trim();
+  if(!desc){showToast('Please enter a description');return;}
+  if(!amount||amount<=0){showToast('Please enter a valid amount');return;}
+  if(!date){showToast('Please choose a date');return;}
   const btn=document.getElementById('save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
   try{
-    await addDoc(collection(db,'entries'),{type,description:desc,amount,date,category:type==='expense'?cat:null,notes:notes||null,receipt:pendingFile||null,createdAt:serverTimestamp(),createdBy:currentUser?.email||'unknown'});
-    if(isManager()) await logManagerChange('Added '+type+' entry',desc+' '+fmt(amount));
+    await addDoc(collection(db,'entries'),{type,description:desc,amount,date,category:type==='expense'?cat:null,notes:notes||null,receipt:pendingFile||null,createdAt:serverTimestamp(),createdBy:auth.currentUser?.email||'unknown'});
     pendingFile=null;window.closeEntry();showToast('✓ Entry saved and synced!');
   }catch(err){showToast('Error: '+err.message);}
   finally{btn.disabled=false;btn.textContent='Save entry';}
 };
 
-// ── FAB ──
-document.getElementById('fab').addEventListener('click',()=>{
-  const active=document.querySelector('.nb.active')?.dataset.s;
-  if(active==='inventory'){openAddItem();return;}
-  if(active==='sales'){openNewSale();return;}
-  if(active==='invoices'){openNewInvoice();return;}
-  if(active==='timesheet'&&(isOwner()||isManager())){openAddEmployee();return;}
-  const today=new Date().toISOString().split('T')[0];
-  document.getElementById('e-date').value=today;
-  document.getElementById('e-desc').value='';document.getElementById('e-amount').value='';
-  document.getElementById('e-notes').value='';document.getElementById('e-preview').style.display='none';
-  document.getElementById('e-fname').textContent='';document.getElementById('file-inp').value='';
-  pendingFile=null;window.onTypeChange();document.getElementById('modal-entry').classList.add('open');
-});
-
-// chip filters
-document.getElementById('cat-chips').addEventListener('click',e=>{const chip=e.target.closest('.chip');if(!chip)return;document.querySelectorAll('#cat-chips .chip').forEach(c=>c.classList.remove('active'));chip.classList.add('active');renderExpenses();});
-
-// close modals on overlay tap
 document.querySelectorAll('.mo').forEach(ov=>{ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});});
 
-// ── LOGIN / AUTH ──
+// ── LOGIN ──
+// Init sales date filters
+(function(){
+  const today=new Date().toISOString().split('T')[0];
+  const monthStart=today.slice(0,8)+'01';
+  const fromEl=document.getElementById('sr-from');
+  const toEl=document.getElementById('sr-to');
+  if(fromEl)fromEl.value=monthStart;
+  if(toEl)toEl.value=today;
+  salesDateFrom=monthStart;salesDateTo=today;
+})();
+
 window.doLogin=async function(){
   const email=document.getElementById('login-email').value.trim();
   const pw=document.getElementById('login-password').value;
-  const btn=document.getElementById('login-btn');const errEl=document.getElementById('login-error');
+  const btn=document.getElementById('login-btn');
+  const errEl=document.getElementById('login-error');
   errEl.textContent='';
   if(!email||!pw){errEl.textContent='Please enter your email and password.';return;}
   btn.disabled=true;btn.innerHTML='<span class="sp"></span> Signing in...';
   try{await signInWithEmailAndPassword(auth,email,pw);}
   catch(e){
-    const msgs={'auth/invalid-credential':'Wrong email or password.','auth/invalid-email':'Email not valid.','auth/user-not-found':'No account found.','auth/wrong-password':'Wrong password.','auth/too-many-requests':'Too many attempts. Try again later.','auth/network-request-failed':'No internet.','auth/api-key-not-valid':'Firebase config error.'};
+    const msgs={'auth/invalid-credential':'Wrong email or password.','auth/invalid-email':'Email address is not valid.','auth/user-not-found':'No account found with this email.','auth/wrong-password':'Wrong password.','auth/too-many-requests':'Too many attempts. Try again later.','auth/network-request-failed':'No internet. Check your connection.','auth/api-key-not-valid':'Firebase API key is wrong. Check your config.'};
     errEl.textContent=msgs[e.code]||('Error: '+e.message);
     btn.disabled=false;btn.textContent='Sign In';
   }
 };
-window.doLogout=async function(){if(!confirm('Sign out?'))return;stopClock();await signOut(auth);};
+window.doLogout=async function(){if(!confirm('Sign out?'))return;await signOut(auth);};
 document.getElementById('login-password').addEventListener('keydown',e=>{if(e.key==='Enter')window.doLogin();});
 
 // ── INIT ──
 function showInitError(msg){document.getElementById('login-error').textContent='⚠️ '+msg;document.getElementById('login-btn').disabled=false;document.getElementById('login-btn').textContent='Sign In';}
 
-checkQRLogin();
-
-// init sales date filter
-(function(){
-  const today=new Date().toISOString().split('T')[0];const m='01';
-  const from=today.slice(0,8)+m;
-  const f=document.getElementById('sr-from'),t=document.getElementById('sr-to');
-  if(f)f.value=from;if(t)t.value=today;
-  salesDateFrom=from;salesDateTo=today;
-})();
-
 if(!isConfigured){
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
-  showToast('⚠️ Paste your 6 Firebase credentials in the HTML file',6000);
-  document.getElementById('tb-sub').textContent='Configure Firebase first';
+  document.getElementById('fab').style.display='none';
+  showToast('⚠️ Paste your 6 Firebase credentials in the HTML file',5000);
 }else{
   try{
     app=initializeApp(FIREBASE_CONFIG);auth=getAuth(app);db=getFirestore(app);
-    onAuthStateChanged(auth,async user=>{
+    onAuthStateChanged(auth,user=>{
       if(user){
-        currentUser=user;
-        // load user profile from Firestore
-        try{
-          const profSnap=await db.collection('userProfiles').where('email','==',user.email).limit(1).get();
-          if(!profSnap.empty){userProfile=profSnap.docs[0].data();}
-          else{
-            // fallback: if no profile exists, default to staff for safety
-            userProfile={role:'staff',name:user.email.split('@')[0],email:user.email};
-          }
-        }catch(e){userProfile={role:'staff',name:user.email.split('@')[0],email:user.email};}
-
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
-        const roleCap=role().charAt(0).toUpperCase()+role().slice(1);
-        document.getElementById('tb-sub').textContent=roleCap+' account';
-        document.getElementById('user-label').textContent=(userProfile?.name||user.email.split('@')[0]);
-        // show alert bell only for owners
-        if(isOwner()) document.getElementById('alert-bell').classList.remove('hidden');
+        document.getElementById('fab').style.display='flex';
+        document.getElementById('user-label').textContent=user.email.split('@')[0];
 
-        // Build nav based on role
-        buildNav();
-        renderBranchTabs();
+        onSnapshot(query(collection(db,'entries'),orderBy('date','desc')),snap=>{
+          entries=snap.docs.map(d=>({id:d.id,...d.data()}));
+          document.getElementById('sync-dot').classList.add('live');render();
+        },err=>{document.getElementById('sync-dot').classList.remove('live');showToast('Sync error: '+err.message,5000);});
 
-        // Subscribe to collections based on role
-        // All roles get inventory, sales, invoices, timeLogs, movements
-        onSnapshot(query(collection(db,'entries'),orderBy('date','desc')),snap=>{entries=snap.docs.map(d=>({id:d.id,...d.data()}));document.getElementById('sync-dot').classList.add('live');render();},err=>{document.getElementById('sync-dot').classList.remove('live');showToast('Sync error: '+err.message,5000);});
-        onSnapshot(query(collection(db,'invItems'),orderBy('name','asc')),snap=>{invItems=snap.docs.map(d=>({id:d.id,...d.data()}));renderInvItems();renderMovements();},err=>showToast('Inv sync error',4000));
-        onSnapshot(query(collection(db,'movements'),orderBy('date','desc')),snap=>{movements=snap.docs.map(d=>({id:d.id,...d.data()}));renderMovements();},err=>showToast('Movements sync error',4000));
-        onSnapshot(query(collection(db,'invoices'),orderBy('date','desc')),snap=>{invoices=snap.docs.map(d=>({id:d.id,...d.data()}));renderInvoiceList();},err=>showToast('Invoice sync error',4000));
-        onSnapshot(query(collection(db,'sales'),orderBy('date','desc')),snap=>{salesRecords=snap.docs.map(d=>({id:d.id,...d.data()}));renderBranchTabs();renderSalesList();},err=>showToast('Sales sync error',4000));
-        onSnapshot(query(collection(db,'employees'),orderBy('name','asc')),snap=>{employees=snap.docs.map(d=>({id:d.id,...d.data()}));renderEmployeeList();if(isStaff())renderStaffTimesheetView();},err=>showToast('Employee sync error',4000));
-        onSnapshot(query(collection(db,'timeLogs'),orderBy('date','desc')),snap=>{timeLogs=snap.docs.map(d=>({id:d.id,...d.data()}));renderEmployeeList();if(isStaff())renderStaffTimesheetView();if(currentEmpId)renderEmpDetail(currentEmpId);},err=>showToast('Timesheet sync error',4000));
-        onSnapshot(doc(db,'settings','branches'),snap=>{if(snap.exists()){branches=snap.data().list||[];}else{branches=[];}renderBranchTabs();},()=>{branches=[];});
-        if(isOwner()||isManager()){
-          onSnapshot(query(collection(db,'userProfiles'),orderBy('name','asc')),snap=>{userProfiles=snap.docs.map(d=>({id:d.id,...d.data()}));},err=>{});
-        }
-        if(isOwner()){
-          onSnapshot(query(collection(db,'changelog'),orderBy('createdAt','desc')),snap=>{
-            changeLog=snap.docs.map(d=>({id:d.id,...d.data()}));
-            unreadAlerts=changeLog.filter(c=>!c.isRead).length;
-            const badge=document.getElementById('alert-count');
-            const bell=document.getElementById('alert-bell');
-            badge.textContent=unreadAlerts>0?unreadAlerts:'';
-            bell.style.opacity=unreadAlerts>0?'1':'0.5';
-            if(document.querySelector('#screen-changelog.active'))renderChangelog();
-          },err=>{});
-        }
+        onSnapshot(query(collection(db,'invItems'),orderBy('name','asc')),snap=>{
+          invItems=snap.docs.map(d=>({id:d.id,...d.data()}));renderInvItems();renderMovements();
+        },err=>showToast('Inventory sync error: '+err.message,4000));
 
-        // After login, show clock screen if staff or manager (or QR scanned)
-        if(window._qrEmpId || isStaff() || isManager()){
-          setTimeout(()=>openClockScreen(),600);
-        }
+        onSnapshot(query(collection(db,'movements'),orderBy('date','desc')),snap=>{
+          movements=snap.docs.map(d=>({id:d.id,...d.data()}));renderMovements();
+        },err=>showToast('Movement sync error: '+err.message,4000));
+
+        onSnapshot(query(collection(db,'invoices'),orderBy('date','desc')),snap=>{
+          invoices=snap.docs.map(d=>({id:d.id,...d.data()}));renderInvoiceList();
+        },err=>showToast('Invoice sync error: '+err.message,4000));
+
+        onSnapshot(query(collection(db,'sales'),orderBy('date','desc')),snap=>{
+          salesRecords=snap.docs.map(d=>({id:d.id,...d.data()}));
+          renderBranchTabs();renderSalesList();
+        },err=>showToast('Sales sync error: '+err.message,4000));
+
+        onSnapshot(query(collection(db,'employees'),orderBy('name','asc')),snap=>{
+          employees=snap.docs.map(d=>({id:d.id,...d.data()}));
+          renderEmployeeList();
+        },err=>showToast('Employee sync error: '+err.message,4000));
+
+        onSnapshot(query(collection(db,'timeLogs'),orderBy('date','desc')),snap=>{
+          timeLogs=snap.docs.map(d=>({id:d.id,...d.data()}));
+          renderEmployeeList();
+          if(currentEmpId) renderEmpDetail(currentEmpId);
+        },err=>showToast('Timesheet sync error: '+err.message,4000));
+
+        onSnapshot(doc(db,'settings','branches'),snap=>{
+          if(snap.exists()){const d=snap.data();branches=d.list||[];}
+          else branches=[];
+          renderBranchTabs();
+        },err=>{branches=[];});
 
       }else{
-        currentUser=null;userProfile=null;
         document.getElementById('login-screen').classList.remove('hidden');
         document.getElementById('app').classList.add('hidden');
-        document.getElementById('clock-screen').classList.remove('open');
         document.getElementById('fab').style.display='none';
-        entries=[];invItems=[];movements=[];invoices=[];salesRecords=[];employees=[];timeLogs=[];branches=[];userProfiles=[];changeLog=[];
-        stopClock();
+        entries=[];invItems=[];movements=[];invoices=[];salesRecords=[];employees=[];timeLogs=[];branches=[];
       }
     },err=>showInitError('Auth error: '+err.message));
   }catch(err){showInitError('Setup error: '+err.message);}
