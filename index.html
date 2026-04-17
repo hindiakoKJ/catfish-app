@@ -1255,7 +1255,7 @@ window.printEmpQR=function(){
     <img src="${canvas.toDataURL()}" style="width:200px;height:200px;border:2px solid #0F6E56;border-radius:12px;"/>
     <div style="margin-top:16px;font-size:12px;color:#9A9A94;">Scan QR code to clock in/out</div>
     <div style="margin-top:4px;font-size:11px;color:#9A9A94;">CatFish Farm</div>
-    <script>window.print();<\/script>
+    <scr'+'ipt>window.print();<\/scr'+'ipt>
   </body></html>`);
 };
 
@@ -1723,7 +1723,7 @@ function renderExportPreview(){
     const sheetColors={'Expenses':'#FCEBEB','Sales':'#E1F5EE','Capital & Income':'#EAF3DE','Inventory':'#F1EFE8','Timesheet':'#E6F1FB','Invoices':'#EEEDFE'};
     const bg=sheetColors[r.sheet]||'#F1EFE8';
     const main = r.sheet==='Timesheet'
-      ? `${r.employee} — ${r.status}${r.timeIn?' ('+r.timeIn+(r.timeOut?'–'+r.timeOut:'')+')'':''}`
+      ? (r.employee+' — '+r.status+(r.timeIn?' ('+r.timeIn+(r.timeOut?' - '+r.timeOut:'')+')':''))
       : r.sheet==='Inventory'
         ? `${r.description} ${r.category} ${r.qty?'×'+r.qty:''}`
         : r.description;
@@ -1920,7 +1920,7 @@ window.exportPrint = function(){
     html += '</table>';
   });
 
-  html += `<script>window.onload=function(){window.print();}<\/script></body></html>`;
+  html += '<scr'+'ipt>window.onload=function(){window.print();}<\/scr'+'ipt></body></html>';
 
   const win = window.open('','_blank');
   if(win){ win.document.write(html); win.document.close(); }
