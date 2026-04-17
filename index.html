@@ -296,6 +296,36 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t);font-s
 .restricted-icon{font-size:48px;margin-bottom:12px;}
 .restricted-title{font-size:17px;font-weight:600;margin-bottom:6px;}
 .restricted-sub{font-size:13px;color:var(--t3);line-height:1.6;}
+
+/* ── EXPORT SCREEN ── */
+.exp-section{padding:12px 14px 0;}
+.exp-period-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 14px 0;}
+.ep-btn{padding:8px 4px;border-radius:var(--rs);font-size:12px;font-weight:600;border:1.5px solid var(--bd2);background:var(--sf);cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--t2);text-align:center;transition:all .12s;}
+.ep-btn.active{background:var(--g);color:#fff;border-color:var(--g);}
+.exp-custom-dates{display:none;padding:8px 14px 0;gap:8px;align-items:center;}
+.exp-custom-dates.show{display:flex;}
+.exp-custom-dates input{flex:1;padding:8px 10px;border-radius:var(--rs);border:1.5px solid var(--bd2);background:var(--bg);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--t);}
+.exp-type-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px 0;}
+.exp-type-card{background:var(--sf);border-radius:var(--ra);border:1px solid var(--bd);padding:14px;cursor:pointer;transition:all .15s;position:relative;}
+.exp-type-card:active{transform:scale(.98);}
+.exp-type-card.selected{border-color:var(--g);background:#F0FBF6;}
+.exp-type-icon{font-size:26px;margin-bottom:6px;}
+.exp-type-name{font-size:13px;font-weight:600;}
+.exp-type-desc{font-size:11px;color:var(--t3);margin-top:2px;line-height:1.4;}
+.exp-type-check{position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:50%;border:2px solid var(--bd2);display:flex;align-items:center;justify-content:center;font-size:11px;}
+.exp-type-card.selected .exp-type-check{background:var(--g);border-color:var(--g);color:#fff;}
+.exp-preview-card{background:var(--sf);border-radius:var(--ra);border:1px solid var(--bd);margin:10px 14px 0;overflow:hidden;}
+.exp-preview-hd{padding:12px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;}
+.exp-preview-title{font-size:14px;font-weight:600;}
+.exp-preview-count{font-size:12px;color:var(--t3);}
+.exp-preview-rows{max-height:200px;overflow-y:auto;}
+.exp-preview-row{display:flex;padding:8px 14px;border-bottom:1px solid var(--bd);font-size:12px;gap:8px;}
+.exp-preview-row:last-child{border-bottom:none;}
+.exp-preview-row .epc{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--t2);}
+.exp-preview-row .epa{flex-shrink:0;font-weight:600;color:var(--t);}
+.exp-action-bar{padding:12px 14px;display:flex;gap:8px;}
+.exp-btn-csv{flex:1;padding:13px;border-radius:var(--rs);background:var(--g);color:#fff;border:none;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;}
+.exp-btn-print{flex:1;padding:13px;border-radius:var(--rs);background:var(--bl);color:#fff;border:none;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;}
 @media print{body>*:not(#invoice-print){display:none!important;}#invoice-print{display:block!important;position:static;padding:0;}.ip-btns{display:none!important;}}
 </style>
 </head>
@@ -487,6 +517,73 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t);font-s
       <div class="card">
         <div class="ch"><span class="cht">Branches</span><button class="chb" onclick="openBranchMgmt()">Manage</button></div>
         <div id="branch-summary"><div class="empty"><div class="empty-icon">🏗</div><div class="empty-text">No branches configured</div></div></div>
+      </div>
+    </div>
+
+
+    <!-- EXPORT (owner/manager) -->
+    <div id="screen-export" class="screen">
+      <div class="exp-section"><div class="sl" style="padding:14px 0 6px;">Report period</div></div>
+      <div class="exp-period-grid" id="exp-period-grid">
+        <button class="ep-btn active" data-p="today">Today</button>
+        <button class="ep-btn" data-p="week">This week</button>
+        <button class="ep-btn" data-p="month">This month</button>
+        <button class="ep-btn" data-p="year">This year</button>
+        <button class="ep-btn" data-p="last7">Last 7 days</button>
+        <button class="ep-btn" data-p="last30">Last 30 days</button>
+        <button class="ep-btn" data-p="last90">Last 90 days</button>
+        <button class="ep-btn" data-p="custom">Custom</button>
+      </div>
+      <div class="exp-custom-dates" id="exp-custom-dates">
+        <input type="date" id="exp-from"/><span style="font-size:12px;color:var(--t3);">to</span>
+        <input type="date" id="exp-to"/><button class="date-filter-btn" onclick="applyCustomExportPeriod()">Apply</button>
+      </div>
+      <div class="exp-section"><div class="sl" style="padding:14px 0 6px;">What to export</div></div>
+      <div class="exp-type-grid">
+        <div class="exp-type-card selected" data-type="expenses" onclick="toggleExportType(this)">
+          <div class="exp-type-check">✓</div>
+          <div class="exp-type-icon">💸</div>
+          <div class="exp-type-name">Expenses</div>
+          <div class="exp-type-desc">All expense entries with category &amp; amount</div>
+        </div>
+        <div class="exp-type-card selected" data-type="sales" onclick="toggleExportType(this)">
+          <div class="exp-type-check">✓</div>
+          <div class="exp-type-icon">📊</div>
+          <div class="exp-type-name">Sales</div>
+          <div class="exp-type-desc">Daily sales per branch with items &amp; totals</div>
+        </div>
+        <div class="exp-type-card selected" data-type="capital" onclick="toggleExportType(this)">
+          <div class="exp-type-check">✓</div>
+          <div class="exp-type-icon">💰</div>
+          <div class="exp-type-name">Capital &amp; Income</div>
+          <div class="exp-type-desc">Capital additions &amp; income records</div>
+        </div>
+        <div class="exp-type-card selected" data-type="inventory" onclick="toggleExportType(this)">
+          <div class="exp-type-check">✓</div>
+          <div class="exp-type-icon">📦</div>
+          <div class="exp-type-name">Inventory movements</div>
+          <div class="exp-type-desc">All stock IN / OUT / adjustments</div>
+        </div>
+        <div class="exp-type-card selected" data-type="timesheet" onclick="toggleExportType(this)">
+          <div class="exp-type-check">✓</div>
+          <div class="exp-type-icon">🕐</div>
+          <div class="exp-type-name">Timesheet</div>
+          <div class="exp-type-desc">Employee time in/out &amp; attendance</div>
+        </div>
+        <div class="exp-type-card selected" data-type="invoices" onclick="toggleExportType(this)">
+          <div class="exp-type-check">✓</div>
+          <div class="exp-type-icon">🧾</div>
+          <div class="exp-type-name">Invoices</div>
+          <div class="exp-type-desc">Invoice summary with status &amp; totals</div>
+        </div>
+      </div>
+      <div class="exp-preview-card">
+        <div class="exp-preview-hd"><span class="exp-preview-title">Preview</span><span class="exp-preview-count" id="exp-preview-count">0 rows</span></div>
+        <div class="exp-preview-rows" id="exp-preview-rows"><div class="empty" style="padding:20px;"><div class="empty-text">Select a period and type above</div></div></div>
+      </div>
+      <div class="exp-action-bar">
+        <button class="exp-btn-csv" onclick="exportCSV()">⬇ Download CSV</button>
+        <button class="exp-btn-print" onclick="exportPrint()">🖨 Print Report</button>
       </div>
     </div>
 
@@ -710,12 +807,12 @@ const onSnapshot=(q,ok,err)=>q.onSnapshot({next:ok,error:err});
 // PASTE YOUR 6 FIREBASE CREDENTIALS HERE
 // ══════════════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBWCx4Xpw3ZkSSVjE7c8WCOvitssWunufQ",
-  authDomain: "catfish-business.firebaseapp.com",
-  projectId: "catfish-business",
-  storageBucket: "catfish-business.firebasestorage.app",
-  messagingSenderId: "1019229341744",
-  appId: "1:1019229341744:web:ae112945e73866a2e805f5"
+  apiKey: "PASTE_YOUR_API_KEY_HERE",
+  authDomain: "PASTE_YOUR_AUTH_DOMAIN_HERE",
+  projectId: "PASTE_YOUR_PROJECT_ID_HERE",
+  storageBucket: "PASTE_YOUR_STORAGE_BUCKET_HERE",
+  messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID_HERE",
+  appId: "PASTE_YOUR_APP_ID_HERE"
 };
 const isConfigured = !FIREBASE_CONFIG.apiKey.includes('PASTE');
 
@@ -724,8 +821,8 @@ const isConfigured = !FIREBASE_CONFIG.apiKey.includes('PASTE');
 // These accounts ALWAYS get owner access, no setup needed.
 // ══════════════════════════════════════════════════════════════
 const OWNER_EMAILS = [
-  "hnskjygg@gmail.com",
-  "pixelskj1@gmail.com"
+  "PASTE_OWNER1_EMAIL_HERE",
+  "PASTE_OWNER2_EMAIL_HERE"
 ];
 
 // ── STATE ──
@@ -773,6 +870,7 @@ const NAV_OWNER=[
   {s:'timesheet',i:'🕐',l:'Staff'},
   {s:'changelog',i:'📋',l:'Log'},
   {s:'users',i:'👥',l:'Users'},
+  {s:'export',i:'⬇',l:'Export'},
 ];
 const NAV_MANAGER=[
   {s:'dashboard',i:'🏠',l:'Home'},
@@ -782,6 +880,7 @@ const NAV_MANAGER=[
   {s:'sales',i:'📊',l:'Sales'},
   {s:'invoices',i:'🧾',l:'Invoices'},
   {s:'timesheet',i:'🕐',l:'Staff'},
+  {s:'export',i:'⬇',l:'Export'},
 ];
 const NAV_STAFF=[
   {s:'inventory',i:'📦',l:'Stock'},
@@ -821,6 +920,7 @@ function switchScreen(name, silent=false){
   }
   if(name==='changelog') renderChangelog();
   if(name==='users') renderUsers();
+  if(name==='export') renderExportPreview();
 }
 
 // ── COLORS / CATS ──
@@ -1531,6 +1631,303 @@ window.saveEntry=async function(){
   finally{btn.disabled=false;btn.textContent='Save entry';}
 };
 
+
+// ══════════════════════════════════════════════════════════════
+// EXPORT MODULE
+// ══════════════════════════════════════════════════════════════
+let expPeriod = 'today';
+let expFromDate = '', expToDate = '';
+let expTypes = new Set(['expenses','sales','capital','inventory','timesheet','invoices']);
+
+function getExportDateRange(period){
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const fmt = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const today = fmt(now);
+  switch(period){
+    case 'today':   return {from:today, to:today};
+    case 'week':{
+      const d = new Date(now); d.setDate(d.getDate()-d.getDay());
+      return {from:fmt(d), to:today};
+    }
+    case 'month':   return {from:now.getFullYear()+'-'+pad(now.getMonth()+1)+'-01', to:today};
+    case 'year':    return {from:now.getFullYear()+'-01-01', to:today};
+    case 'last7':{  const d=new Date(now);d.setDate(d.getDate()-6);return{from:fmt(d),to:today};}
+    case 'last30':{ const d=new Date(now);d.setDate(d.getDate()-29);return{from:fmt(d),to:today};}
+    case 'last90':{ const d=new Date(now);d.setDate(d.getDate()-89);return{from:fmt(d),to:today};}
+    case 'custom':  return {from:expFromDate||today, to:expToDate||today};
+    default:        return {from:today, to:today};
+  }
+}
+
+function inRange(dateStr, from, to){
+  if(!dateStr) return false;
+  const d = dateStr.slice(0,10);
+  return d >= from && d <= to;
+}
+
+function buildExportData(){
+  const {from, to} = getExportDateRange(expPeriod);
+  const rows = [];
+
+  if(expTypes.has('expenses')){
+    entries.filter(e=>e.type==='expense'&&inRange(e.date,from,to)).forEach(e=>{
+      rows.push({sheet:'Expenses', date:e.date, description:e.description||'', category:e.category||'', amount:Number(e.amount)||0, type:'Expense', branch:'', employee:'', unit:'', qty:'', timeIn:'', timeOut:'', overtime:'', status:'', submittedBy:e.createdBy||''});
+    });
+  }
+  if(expTypes.has('capital')){
+    entries.filter(e=>(e.type==='income'||e.type==='capital')&&inRange(e.date,from,to)).forEach(e=>{
+      rows.push({sheet:'Capital & Income', date:e.date, description:e.description||'', category:e.type==='income'?'Income':'Capital Added', amount:Number(e.amount)||0, type:e.type, branch:'', employee:'', unit:'', qty:'', timeIn:'', timeOut:'', overtime:'', status:'', submittedBy:e.createdBy||''});
+    });
+  }
+  if(expTypes.has('sales')){
+    salesRecords.filter(s=>inRange(s.date,from,to)).forEach(s=>{
+      const itemStr=(s.items||[]).map(i=>`${Number(i.qty).toFixed(1)}${i.unit||'kg'} ${i.name} @₱${Number(i.price).toFixed(2)}`).join('; ');
+      rows.push({sheet:'Sales', date:s.date, description:s.customerName||'Walk-in', category:'Sale', amount:Number(s.total)||0, type:'Sale', branch:s.branch||'', employee:'', unit:itemStr, qty:'', timeIn:'', timeOut:'', overtime:'', status:'', submittedBy:s.submittedBy||''});
+    });
+  }
+  if(expTypes.has('inventory')){
+    movements.filter(m=>inRange(m.date,from,to)).forEach(m=>{
+      const item=invItems.find(i=>i.id===m.itemId);
+      rows.push({sheet:'Inventory', date:m.date, description:(item?.name||m.itemName||'Unknown'), category:m.type.toUpperCase(), amount:0, type:'Inventory '+m.type, branch:'', employee:'', unit:item?.unit||'', qty:Number(m.qty)||0, timeIn:'', timeOut:'', overtime:'', status:m.reason||'', submittedBy:m.createdBy||''});
+    });
+  }
+  if(expTypes.has('timesheet')){
+    timeLogs.filter(t=>inRange(t.date,from,to)).forEach(t=>{
+      const emp=employees.find(e=>e.id===t.empId);
+      rows.push({sheet:'Timesheet', date:t.date, description:emp?.name||'Unknown', category:emp?.role||'Staff', amount:0, type:'Attendance', branch:emp?.branch||'', employee:emp?.name||'', unit:'', qty:'', timeIn:t.timeIn||'', timeOut:t.timeOut||'', overtime:Number(t.overtime)||0, status:t.status||'present', submittedBy:t.createdBy||''});
+    });
+  }
+  if(expTypes.has('invoices')){
+    invoices.filter(i=>inRange(i.date,from,to)).forEach(i=>{
+      const itemStr=(i.lineItems||[]).map(li=>`${Number(li.qty).toFixed(1)}${li.unit||'kg'} ${li.name} @₱${Number(li.price).toFixed(2)}`).join('; ');
+      rows.push({sheet:'Invoices', date:i.date, description:i.customerName||'Customer', category:'INV-'+String(i.invoiceNo||'').padStart(3,'0'), amount:Number(i.total)||0, type:'Invoice', branch:'', employee:'', unit:itemStr, qty:'', timeIn:'', timeOut:'', overtime:'', status:i.status||'pending', submittedBy:i.createdBy||''});
+    });
+  }
+
+  rows.sort((a,b)=>a.date.localeCompare(b.date)||a.sheet.localeCompare(b.sheet));
+  return {rows, from, to};
+}
+
+function renderExportPreview(){
+  const {rows, from, to} = buildExportData();
+  const el = document.getElementById('exp-preview-rows');
+  const countEl = document.getElementById('exp-preview-count');
+  countEl.textContent = rows.length + ' rows · ' + fmtDate(from) + (from!==to?' – '+fmtDate(to):'');
+  if(!rows.length){
+    el.innerHTML='<div class="empty" style="padding:20px;"><div class="empty-text">No data in selected period</div>Try a wider date range</div>';
+    return;
+  }
+  // show first 15 rows as preview
+  el.innerHTML = rows.slice(0,15).map(r=>{
+    const sheetColors={'Expenses':'#FCEBEB','Sales':'#E1F5EE','Capital & Income':'#EAF3DE','Inventory':'#F1EFE8','Timesheet':'#E6F1FB','Invoices':'#EEEDFE'};
+    const bg=sheetColors[r.sheet]||'#F1EFE8';
+    const main = r.sheet==='Timesheet'
+      ? `${r.employee} — ${r.status}${r.timeIn?' ('+r.timeIn+(r.timeOut?'–'+r.timeOut:'')+')'':''}`
+      : r.sheet==='Inventory'
+        ? `${r.description} ${r.category} ${r.qty?'×'+r.qty:''}`
+        : r.description;
+    const amtStr = r.amount>0?fmt(r.amount):r.qty?r.qty+(r.unit?' '+r.unit:''):'';
+    return`<div class="exp-preview-row"><span class="bdg" style="background:${bg};color:#1A1A18;flex-shrink:0;">${r.sheet}</span><span class="epc">${escHtml(fmtDate(r.date))} · ${escHtml(main)}</span><span class="epa">${amtStr}</span></div>`;
+  }).join('') + (rows.length>15?`<div style="padding:8px 14px;font-size:12px;color:var(--t3);">...and ${rows.length-15} more rows in the download</div>`:'');
+}
+
+window.toggleExportType = function(card){
+  const type = card.dataset.type;
+  if(expTypes.has(type)){expTypes.delete(type);card.classList.remove('selected');}
+  else{expTypes.add(type);card.classList.add('selected');}
+  renderExportPreview();
+};
+
+window.applyCustomExportPeriod = function(){
+  expFromDate = document.getElementById('exp-from').value;
+  expToDate   = document.getElementById('exp-to').value;
+  renderExportPreview();
+};
+
+// Period button clicks
+document.getElementById('exp-period-grid').addEventListener('click', e=>{
+  const btn = e.target.closest('.ep-btn'); if(!btn) return;
+  document.querySelectorAll('.ep-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  expPeriod = btn.dataset.p;
+  const customDates = document.getElementById('exp-custom-dates');
+  customDates.classList.toggle('show', expPeriod==='custom');
+  if(expPeriod!=='custom') renderExportPreview();
+});
+
+window.exportCSV = function(){
+  const {rows, from, to} = buildExportData();
+  if(!rows.length){showToast('No data to export for this period');return;}
+
+  // Build multi-sheet CSV (sheets separated by blank lines + header)
+  const sheets = [...new Set(rows.map(r=>r.sheet))];
+  let csv = '';
+
+  // Summary sheet first
+  csv += 'CATFISH FARM — EXPORT REPORT
+';
+  csv += `Period:,${fmtDate(from)} to ${fmtDate(to)}
+`;
+  csv += `Generated:,${new Date().toLocaleString('en-PH')}
+`;
+  csv += `Generated by:,${userProfile?.name||currentUser?.email||'Unknown'}
+
+`;
+
+  const sheetHeaders = {
+    'Expenses':       ['Date','Description','Category','Amount (₱)','Submitted By'],
+    'Capital & Income':['Date','Description','Type','Amount (₱)','Submitted By'],
+    'Sales':          ['Date','Customer','Branch','Items','Total (₱)','Submitted By'],
+    'Inventory':      ['Date','Item','Movement','Quantity','Unit','Reason','Submitted By'],
+    'Timesheet':      ['Date','Employee','Role','Branch','Status','Time In','Time Out','Hours','Overtime (hrs)','Submitted By'],
+    'Invoices':       ['Date','Customer','Invoice No.','Items','Total (₱)','Status','Submitted By'],
+  };
+  const sheetBuilders = {
+    'Expenses':       r=>[r.date,r.description,r.category,r.amount.toFixed(2),r.submittedBy],
+    'Capital & Income':r=>[r.date,r.description,r.category,r.amount.toFixed(2),r.submittedBy],
+    'Sales':          r=>[r.date,r.description,r.branch,r.unit,r.amount.toFixed(2),r.submittedBy],
+    'Inventory':      r=>[r.date,r.description,r.category,r.qty,r.unit,r.status,r.submittedBy],
+    'Timesheet':      r=>{const hrs=calcHours(r.timeIn,r.timeOut)||'';return[r.date,r.employee,r.category,r.branch,r.status,r.timeIn,r.timeOut,hrs,r.overtime,r.submittedBy];},
+    'Invoices':       r=>[r.date,r.description,r.category,r.unit,r.amount.toFixed(2),r.status,r.submittedBy],
+  };
+
+  sheets.forEach(sheet=>{
+    const sheetRows = rows.filter(r=>r.sheet===sheet);
+    const headers = sheetHeaders[sheet]||['Date','Description','Amount'];
+    const builder = sheetBuilders[sheet]||(r=>[r.date,r.description,r.amount.toFixed(2)]);
+
+    csv += `--- ${sheet.toUpperCase()} (${sheetRows.length} records) ---
+`;
+    csv += headers.map(h=>'"'+h+'"').join(',') + '
+';
+
+    // totals for money sheets
+    let sheetTotal = 0;
+    sheetRows.forEach(r=>{
+      const vals = builder(r);
+      csv += vals.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',') + '
+';
+      if(r.amount>0) sheetTotal += r.amount;
+    });
+    if(['Expenses','Sales','Capital & Income','Invoices'].includes(sheet)){
+      csv += `"TOTAL",${'""'.repeat(headers.length-2)},"${sheetTotal.toFixed(2)}"
+`;
+    }
+    csv += '
+';
+  });
+
+  // Grand summary
+  csv += '--- SUMMARY ---
+';
+  csv += '"Category","Total (₱)"
+';
+  const expTotal = rows.filter(r=>r.sheet==='Expenses').reduce((s,r)=>s+r.amount,0);
+  const salesTotal = rows.filter(r=>r.sheet==='Sales').reduce((s,r)=>s+r.amount,0);
+  const capTotal = rows.filter(r=>r.sheet==='Capital & Income').reduce((s,r)=>s+r.amount,0);
+  const invTotal = rows.filter(r=>r.sheet==='Invoices').reduce((s,r)=>s+r.amount,0);
+  if(expTotal>0)   csv += `"Total Expenses","${expTotal.toFixed(2)}"
+`;
+  if(salesTotal>0) csv += `"Total Sales","${salesTotal.toFixed(2)}"
+`;
+  if(capTotal>0)   csv += `"Total Capital & Income","${capTotal.toFixed(2)}"
+`;
+  if(invTotal>0)   csv += `"Total Invoiced","${invTotal.toFixed(2)}"
+`;
+  csv += `"Net Profit (Income − Expenses)","${(salesTotal+capTotal-expTotal).toFixed(2)}"
+`;
+
+  // Download
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const periodLabel = expPeriod==='custom'?from+'_to_'+to:expPeriod;
+  a.href = url;
+  a.download = `CatFish_Report_${periodLabel}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('✓ CSV downloaded!');
+};
+
+window.exportPrint = function(){
+  const {rows, from, to} = buildExportData();
+  if(!rows.length){showToast('No data to export for this period');return;}
+
+  const sheets = [...new Set(rows.map(r=>r.sheet))];
+  const expTotal   = rows.filter(r=>r.sheet==='Expenses').reduce((s,r)=>s+r.amount,0);
+  const salesTotal = rows.filter(r=>r.sheet==='Sales').reduce((s,r)=>s+r.amount,0);
+  const capTotal   = rows.filter(r=>r.sheet==='Capital & Income').reduce((s,r)=>s+r.amount,0);
+  const net        = salesTotal + capTotal - expTotal;
+
+  const sheetColors={'Expenses':'#FCEBEB','Sales':'#E1F5EE','Capital & Income':'#EAF3DE','Inventory':'#F1EFE8','Timesheet':'#E6F1FB','Invoices':'#EEEDFE'};
+
+  let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+  <style>
+    body{font-family:DM Sans,Arial,sans-serif;font-size:12px;color:#1A1A18;padding:24px;max-width:900px;margin:0 auto;}
+    h1{font-size:20px;font-weight:700;color:#0F6E56;margin-bottom:2px;}
+    .meta{font-size:11px;color:#888;margin-bottom:20px;}
+    .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;}
+    .sum-card{background:#F5F7F5;border-radius:8px;padding:12px;}
+    .sum-label{font-size:10px;color:#888;margin-bottom:4px;}
+    .sum-val{font-size:18px;font-weight:700;}
+    .sum-val.g{color:#0F6E56;}.sum-val.r{color:#C0392B;}
+    h2{font-size:14px;font-weight:700;margin:20px 0 8px;padding:6px 10px;border-radius:6px;}
+    table{width:100%;border-collapse:collapse;margin-bottom:16px;}
+    th{font-size:10px;font-weight:700;color:#888;text-transform:uppercase;padding:6px 8px;border-bottom:2px solid #ddd;text-align:left;}
+    td{padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;}
+    tr:last-child td{border-bottom:none;}
+    .total-row td{font-weight:700;border-top:2px solid #ddd;background:#f9f9f9;}
+    .pos{color:#0F6E56;font-weight:600;}.neg{color:#C0392B;font-weight:600;}
+    @media print{@page{margin:1cm;}body{padding:0;}}
+  </style></head><body>
+  <h1>🐟 CatFish Farm — Export Report</h1>
+  <div class="meta">Period: <b>${fmtDate(from)}${from!==to?' to '+fmtDate(to):''}</b> &nbsp;·&nbsp; Generated: ${new Date().toLocaleString('en-PH')} &nbsp;·&nbsp; By: ${escHtml(userProfile?.name||currentUser?.email||'Unknown')}</div>
+  <div class="summary-grid">
+    <div class="sum-card"><div class="sum-label">Total Sales</div><div class="sum-val g">${fmt(salesTotal)}</div></div>
+    <div class="sum-card"><div class="sum-label">Total Expenses</div><div class="sum-val r">${fmt(expTotal)}</div></div>
+    <div class="sum-card"><div class="sum-label">Capital / Income</div><div class="sum-val">${fmt(capTotal)}</div></div>
+    <div class="sum-card"><div class="sum-label">Net Profit</div><div class="sum-val ${net>=0?'g':'r'}">${fmt(net)}</div></div>
+  </div>`;
+
+  sheets.forEach(sheet=>{
+    const sheetRows = rows.filter(r=>r.sheet===sheet);
+    const bg = sheetColors[sheet]||'#F1EFE8';
+    html += `<h2 style="background:${bg}">${sheet} <span style="font-weight:400;font-size:12px;">(${sheetRows.length} records)</span></h2><table>`;
+
+    if(sheet==='Expenses'){
+      html += '<tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>By</th></tr>';
+      sheetRows.forEach(r=>{ html += `<tr><td>${fmtDate(r.date)}</td><td>${escHtml(r.description)}</td><td>${escHtml(r.category)}</td><td class="neg">−${fmt(r.amount)}</td><td>${escHtml(r.submittedBy)}</td></tr>`; });
+      html += `<tr class="total-row"><td colspan="3">Total</td><td class="neg">${fmt(expTotal)}</td><td></td></tr>`;
+    } else if(sheet==='Sales'){
+      html += '<tr><th>Date</th><th>Customer</th><th>Branch</th><th>Items</th><th>Total</th></tr>';
+      sheetRows.forEach(r=>{ html += `<tr><td>${fmtDate(r.date)}</td><td>${escHtml(r.description)}</td><td>${escHtml(r.branch)}</td><td style="font-size:10px;">${escHtml(r.unit)}</td><td class="pos">${fmt(r.amount)}</td></tr>`; });
+      html += `<tr class="total-row"><td colspan="4">Total</td><td class="pos">${fmt(salesTotal)}</td></tr>`;
+    } else if(sheet==='Capital & Income'){
+      html += '<tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th>By</th></tr>';
+      sheetRows.forEach(r=>{ html += `<tr><td>${fmtDate(r.date)}</td><td>${escHtml(r.description)}</td><td>${escHtml(r.category)}</td><td class="pos">+${fmt(r.amount)}</td><td>${escHtml(r.submittedBy)}</td></tr>`; });
+      html += `<tr class="total-row"><td colspan="3">Total</td><td class="pos">${fmt(capTotal)}</td><td></td></tr>`;
+    } else if(sheet==='Inventory'){
+      html += '<tr><th>Date</th><th>Item</th><th>Movement</th><th>Qty</th><th>Unit</th><th>Reason</th><th>By</th></tr>';
+      sheetRows.forEach(r=>{ html += `<tr><td>${fmtDate(r.date)}</td><td>${escHtml(r.description)}</td><td>${escHtml(r.category)}</td><td>${r.qty}</td><td>${escHtml(r.unit)}</td><td>${escHtml(r.status)}</td><td>${escHtml(r.submittedBy)}</td></tr>`; });
+    } else if(sheet==='Timesheet'){
+      html += '<tr><th>Date</th><th>Employee</th><th>Branch</th><th>Status</th><th>In</th><th>Out</th><th>Hours</th><th>OT hrs</th></tr>';
+      sheetRows.forEach(r=>{ const hrs=calcHours(r.timeIn,r.timeOut)||'—'; html += `<tr><td>${fmtDate(r.date)}</td><td>${escHtml(r.employee)}</td><td>${escHtml(r.branch)}</td><td>${escHtml(r.status)}</td><td>${r.timeIn||'—'}</td><td>${r.timeOut||'—'}</td><td>${hrs}</td><td>${r.overtime||0}</td></tr>`; });
+    } else if(sheet==='Invoices'){
+      html += '<tr><th>Date</th><th>Customer</th><th>Invoice #</th><th>Items</th><th>Total</th><th>Status</th></tr>';
+      sheetRows.forEach(r=>{ html += `<tr><td>${fmtDate(r.date)}</td><td>${escHtml(r.description)}</td><td>${escHtml(r.category)}</td><td style="font-size:10px;">${escHtml(r.unit)}</td><td class="pos">${fmt(r.amount)}</td><td>${escHtml(r.status)}</td></tr>`; });
+    }
+    html += '</table>';
+  });
+
+  html += `<script>window.onload=function(){window.print();}<\/script></body></html>`;
+
+  const win = window.open('','_blank');
+  if(win){ win.document.write(html); win.document.close(); }
+  else { showToast('Allow pop-ups to use print report'); }
+};
+
+// Render preview when export tab is opened
 // ── FAB ──
 document.getElementById('fab').addEventListener('click',()=>{
   const active=document.querySelector('.nb.active')?.dataset.s;
