@@ -803,9 +803,11 @@ const orderBy=(f,d='desc')=>(q)=>q.orderBy(f,d);
 const onSnapshot=(q,ok,err)=>q.onSnapshot({next:ok,error:err});
 </script>
 <script>
-// ══════════════════════════════════════════════════════════════
+// ================================================================
+// CATFISH MANAGER - MAIN APP SCRIPT
+// ================================================================
+
 // PASTE YOUR 6 FIREBASE CREDENTIALS HERE
-// ══════════════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBWCx4Xpw3ZkSSVjE7c8WCOvitssWunufQ",
   authDomain: "catfish-business.firebaseapp.com",
@@ -816,1262 +818,1328 @@ const FIREBASE_CONFIG = {
 };
 const isConfigured = !FIREBASE_CONFIG.apiKey.includes('PASTE');
 
-// ══════════════════════════════════════════════════════════════
-// OWNER EMAILS — add both owner email addresses here.
-// These accounts ALWAYS get owner access, no setup needed.
-// ══════════════════════════════════════════════════════════════
+// OWNER EMAILS - both owner emails always get owner access automatically
 const OWNER_EMAILS = [
   "pixelskj1@gmail.com",
   "hnskjygg@gmail.com"
 ];
 
-// ── STATE ──
+// STATE
 let app, auth, db;
-let currentUser = null;   // Firebase auth user
-let userProfile = null;   // Firestore user profile {role, name, branch}
-let entries=[], invItems=[], movements=[], invoices=[];
-let salesRecords=[], employees=[], timeLogs=[], branches=[], userProfiles=[], changeLog=[];
-let pendingFile=null, currentMvItemId=null, editingItemId=null, currentInvoiceId=null;
-let lineItemCount=0, saleItemCount=0, currentEmpId=null, editingEmpId=null, editingUserId=null;
-let salesBranchFilter='all', salesDateFrom='', salesDateTo='';
-let unreadAlerts=0;
-const DEFAULT_BRANCHES=['Main Farm','Pond A','Pond B'];
+let currentUser = null;
+let userProfile = null;
+let entries = [], invItems = [], movements = [], invoices = [];
+let salesRecords = [], employees = [], timeLogs = [], branches = [], userProfiles = [], changeLog = [];
+let pendingFile = null, currentMvItemId = null, editingItemId = null, currentInvoiceId = null;
+let lineItemCount = 0, saleItemCount = 0, invLineCount = 0;
+let currentEmpId = null, editingEmpId = null, editingUserId = null;
+let salesBranchFilter = 'all', salesDateFrom = '', salesDateTo = '';
+let unreadAlerts = 0;
+let clockTimer = null;
+const DEFAULT_BRANCHES = ['Main Farm', 'Pond A', 'Pond B'];
 
-// ── HELPERS ──
-function fmt(n){const x=Number(n)||0;return'₱'+x.toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function fmtShort(n){const x=Number(n)||0;if(Math.abs(x)>=1e6)return'₱'+(x/1e6).toFixed(1)+'M';if(Math.abs(x)>=1000)return'₱'+(x/1000).toFixed(1)+'k';return fmt(x);}
-function fmtDate(d){if(!d)return'';return new Date(d+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});}
-function fmtTS(ts){if(!ts)return'';if(ts.toDate)return ts.toDate().toLocaleString('en-PH',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});return ts;}
-function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function showToast(msg,dur=2200){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
-function role(){return userProfile?.role||'staff';}
-function isOwner(){return role()==='owner';}
-function isManager(){return role()==='manager';}
-function isStaff(){return role()==='staff';}
-function canEdit(){return isOwner();}
-function canView(section){
-  // owner sees all
-  if(isOwner()) return true;
-  // manager sees all except salary fields (handled inline)
-  if(isManager()) return true;
-  // staff only sees: inventory, sales, invoices, timesheet(own)
-  const staffAllowed=['inventory','sales','invoices','timesheet'];
-  return staffAllowed.includes(section);
+// HELPERS
+function fmt(n) { var x = Number(n) || 0; return '\u20b1' + x.toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtShort(n) { var x = Number(n) || 0; if (Math.abs(x) >= 1e6) return '\u20b1' + (x/1e6).toFixed(1) + 'M'; if (Math.abs(x) >= 1000) return '\u20b1' + (x/1000).toFixed(1) + 'k'; return fmt(x); }
+function fmtDate(d) { if (!d) return ''; return new Date(d + 'T00:00:00').toLocaleDateString('en-PH', {month:'short', day:'numeric', year:'numeric'}); }
+function fmtTS(ts) { if (!ts) return ''; if (ts.toDate) return ts.toDate().toLocaleString('en-PH', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}); return String(ts); }
+function escHtml(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function showToast(msg, dur) { dur = dur || 2200; var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(function() { t.classList.remove('show'); }, dur); }
+function role() { return (userProfile && userProfile.role) || 'staff'; }
+function isOwner() { return role() === 'owner'; }
+function isManager() { return role() === 'manager'; }
+function isStaff() { return role() === 'staff'; }
+function calcHours(ti, to) {
+  if (!ti || !to) return null;
+  var p1 = ti.split(':').map(Number), p2 = to.split(':').map(Number);
+  var mins = (p2[0]*60 + p2[1]) - (p1[0]*60 + p1[1]);
+  if (mins <= 0) return null;
+  return (mins/60).toFixed(1);
 }
 
-// ── ROLE-BASED NAV ──
-const NAV_OWNER=[
-  {s:'dashboard',i:'🏠',l:'Home'},
-  {s:'expenses',i:'💸',l:'Expenses'},
-  {s:'capital',i:'💰',l:'Capital'},
-  {s:'inventory',i:'📦',l:'Stock'},
-  {s:'sales',i:'📊',l:'Sales'},
-  {s:'invoices',i:'🧾',l:'Invoices'},
-  {s:'timesheet',i:'🕐',l:'Staff'},
-  {s:'changelog',i:'📋',l:'Log'},
-  {s:'users',i:'👥',l:'Users'},
-  {s:'export',i:'⬇',l:'Export'},
-];
-const NAV_MANAGER=[
-  {s:'dashboard',i:'🏠',l:'Home'},
-  {s:'expenses',i:'💸',l:'Expenses'},
-  {s:'capital',i:'💰',l:'Capital'},
-  {s:'inventory',i:'📦',l:'Stock'},
-  {s:'sales',i:'📊',l:'Sales'},
-  {s:'invoices',i:'🧾',l:'Invoices'},
-  {s:'timesheet',i:'🕐',l:'Staff'},
-  {s:'export',i:'⬇',l:'Export'},
-];
-const NAV_STAFF=[
-  {s:'inventory',i:'📦',l:'Stock'},
-  {s:'sales',i:'📊',l:'Sales'},
-  {s:'invoices',i:'🧾',l:'Invoices'},
-  {s:'timesheet',i:'🕐',l:'My Time'},
-];
+// NAV CONFIG
+var NAV_OWNER   = [{s:'dashboard',i:'&#127968;',l:'Home'},{s:'expenses',i:'&#128184;',l:'Expenses'},{s:'capital',i:'&#128176;',l:'Capital'},{s:'inventory',i:'&#128230;',l:'Stock'},{s:'sales',i:'&#128202;',l:'Sales'},{s:'invoices',i:'&#129534;',l:'Invoices'},{s:'timesheet',i:'&#128336;',l:'Staff'},{s:'changelog',i:'&#128203;',l:'Log'},{s:'users',i:'&#128101;',l:'Users'},{s:'export',i:'&#11015;',l:'Export'}];
+var NAV_MANAGER = [{s:'dashboard',i:'&#127968;',l:'Home'},{s:'expenses',i:'&#128184;',l:'Expenses'},{s:'capital',i:'&#128176;',l:'Capital'},{s:'inventory',i:'&#128230;',l:'Stock'},{s:'sales',i:'&#128202;',l:'Sales'},{s:'invoices',i:'&#129534;',l:'Invoices'},{s:'timesheet',i:'&#128336;',l:'Staff'},{s:'export',i:'&#11015;',l:'Export'}];
+var NAV_STAFF   = [{s:'inventory',i:'&#128230;',l:'Stock'},{s:'sales',i:'&#128202;',l:'Sales'},{s:'invoices',i:'&#129534;',l:'Invoices'},{s:'timesheet',i:'&#128336;',l:'My Time'}];
 
-function buildNav(){
-  const navList = isOwner()?NAV_OWNER:isManager()?NAV_MANAGER:NAV_STAFF;
-  const nav = document.getElementById('main-nav');
-  nav.innerHTML = navList.map(n=>`<button class="nb" data-s="${n.s}"><span class="ni">${n.i}</span>${n.l}</button>`).join('');
-  nav.querySelectorAll('.nb').forEach(btn=>{
-    btn.addEventListener('click',()=>switchScreen(btn.dataset.s));
+function buildNav() {
+  var navList = isOwner() ? NAV_OWNER : isManager() ? NAV_MANAGER : NAV_STAFF;
+  var nav = document.getElementById('main-nav');
+  nav.innerHTML = navList.map(function(n) {
+    return '<button class="nb" data-s="' + n.s + '"><span class="ni">' + n.i + '</span>' + n.l + '</button>';
+  }).join('');
+  nav.querySelectorAll('.nb').forEach(function(btn) {
+    btn.addEventListener('click', function() { switchScreen(btn.dataset.s); });
   });
-  // activate first tab
-  switchScreen(navList[0].s, true);
+  switchScreen(navList[0].s);
 }
 
-function switchScreen(name, silent=false){
-  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  const btn = document.querySelector(`.nb[data-s="${name}"]`);
-  if(btn) btn.classList.add('active');
-  const scr = document.getElementById('screen-'+name);
-  if(scr) scr.classList.add('active');
-  // update FAB visibility
-  const fabVisible = ['expenses','capital','inventory','sales','invoices','timesheet'].includes(name);
-  const fab = document.getElementById('fab');
-  if(isStaff() && ['expenses','capital'].includes(name)){fab.style.display='none';return;}
-  fab.style.display = fabVisible?'flex':'none';
-  // show/hide timesheet views
-  if(name==='timesheet'){
-    document.getElementById('ts-owner-view').style.display=(isOwner()||isManager())?'block':'none';
-    document.getElementById('ts-staff-view').style.display=isStaff()?'block':'none';
-    if(isStaff()) renderStaffTimesheetView();
+function switchScreen(name) {
+  document.querySelectorAll('.nb').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  var btn = document.querySelector('.nb[data-s="' + name + '"]');
+  if (btn) btn.classList.add('active');
+  var scr = document.getElementById('screen-' + name);
+  if (scr) scr.classList.add('active');
+  var fab = document.getElementById('fab');
+  var fabScreens = ['expenses','capital','inventory','sales','invoices','timesheet'];
+  fab.style.display = fabScreens.indexOf(name) >= 0 ? 'flex' : 'none';
+  if (isStaff() && (name === 'expenses' || name === 'capital')) fab.style.display = 'none';
+  if (name === 'timesheet') {
+    document.getElementById('ts-owner-view').style.display = (isOwner() || isManager()) ? 'block' : 'none';
+    document.getElementById('ts-staff-view').style.display = isStaff() ? 'block' : 'none';
+    if (isStaff()) renderStaffView();
   }
-  if(name==='changelog') renderChangelog();
-  if(name==='users') renderUsers();
-  if(name==='export') renderExportPreview();
+  if (name === 'changelog') renderChangelog();
+  if (name === 'users') renderUsers();
+  if (name === 'export') renderExportPreview();
 }
 
-// ── COLORS / CATS ──
-const CAT={
-  feeds:{bg:'#E1F5EE',bar:'#1D9E75',icon:'🌾',label:'Feeds',badge:'#9FE1CB',btxt:'#085041'},
-  electricity:{bg:'#FAEEDA',bar:'#EF9F27',icon:'⚡',label:'Electricity',badge:'#FAC775',btxt:'#633806'},
-  labor:{bg:'#EEEDFE',bar:'#7F77DD',icon:'👷',label:'Labor',badge:'#CECBF6',btxt:'#26215C'},
-  transport:{bg:'#E6F1FB',bar:'#378ADD',icon:'🚚',label:'Transport',badge:'#B5D4F4',btxt:'#042C53'},
-  medicine:{bg:'#FCEBEB',bar:'#E24B4A',icon:'💊',label:'Medicine',badge:'#F7C1C1',btxt:'#501313'},
-  water:{bg:'#E6F1FB',bar:'#185FA5',icon:'💧',label:'Water',badge:'#85B7EB',btxt:'#042C53'},
-  other:{bg:'#F1EFE8',bar:'#888780',icon:'📦',label:'Other',badge:'#D3D1C7',btxt:'#2C2C2A'},
-  income:{bg:'#EAF3DE',bar:'#639922',icon:'💵',label:'Income',badge:'#C0DD97',btxt:'#173404'},
-  capital:{bg:'#E1F5EE',bar:'#085041',icon:'🏦',label:'Capital',badge:'#5DCAA5',btxt:'#04342C'},
+// CATEGORY DATA
+var CAT = {
+  feeds:       {bg:'#E1F5EE', bar:'#1D9E75', icon:'&#127806;', label:'Feeds',       badge:'#9FE1CB', btxt:'#085041'},
+  electricity: {bg:'#FAEEDA', bar:'#EF9F27', icon:'&#9889;',   label:'Electricity', badge:'#FAC775', btxt:'#633806'},
+  labor:       {bg:'#EEEDFE', bar:'#7F77DD', icon:'&#128119;', label:'Labor',        badge:'#CECBF6', btxt:'#26215C'},
+  transport:   {bg:'#E6F1FB', bar:'#378ADD', icon:'&#128666;', label:'Transport',    badge:'#B5D4F4', btxt:'#042C53'},
+  medicine:    {bg:'#FCEBEB', bar:'#E24B4A', icon:'&#128138;', label:'Medicine',     badge:'#F7C1C1', btxt:'#501313'},
+  water:       {bg:'#E6F1FB', bar:'#185FA5', icon:'&#128167;', label:'Water',        badge:'#85B7EB', btxt:'#042C53'},
+  other:       {bg:'#F1EFE8', bar:'#888780', icon:'&#128230;', label:'Other',        badge:'#D3D1C7', btxt:'#2C2C2A'},
+  income:      {bg:'#EAF3DE', bar:'#639922', icon:'&#128181;', label:'Income',       badge:'#C0DD97', btxt:'#173404'},
+  capital:     {bg:'#E1F5EE', bar:'#085041', icon:'&#127974;', label:'Capital',      badge:'#5DCAA5', btxt:'#04342C'}
 };
-const ICAT={catfish:{icon:'🐟',label:'Live catfish',bg:'#E1F5EE'},feeds:{icon:'🌾',label:'Feeds',bg:'#EAF3DE'},medicine:{icon:'💊',label:'Medicine',bg:'#FCEBEB'},packaging:{icon:'📦',label:'Packaging',bg:'#F1EFE8'},other:{icon:'🔧',label:'Other',bg:'#E6F1FB'}};
-function getInfo(e){if(e.type==='income')return CAT.income;if(e.type==='capital')return CAT.capital;return CAT[e.category]||CAT.other;}
+var ICAT = {
+  catfish:   {icon:'&#128031;', label:'Live catfish',  bg:'#E1F5EE'},
+  feeds:     {icon:'&#127806;', label:'Feeds',         bg:'#EAF3DE'},
+  medicine:  {icon:'&#128138;', label:'Medicine',      bg:'#FCEBEB'},
+  packaging: {icon:'&#128230;', label:'Packaging',     bg:'#F1EFE8'},
+  other:     {icon:'&#128295;', label:'Other',         bg:'#E6F1FB'}
+};
+function getInfo(e) {
+  if (e.type === 'income') return CAT.income;
+  if (e.type === 'capital') return CAT.capital;
+  return CAT[e.category] || CAT.other;
+}
 
-// ── CHANGE LOG (manager action logging) ──
-async function logManagerChange(action, details){
-  if(!isManager()) return;
-  try{
-    await addDoc(collection(db,'changelog'),{
-      who: userProfile?.name||currentUser?.email||'Manager',
-      email: currentUser?.email||'',
-      action, details,
-      isRead: false,
+// CHANGE LOG
+async function logManagerChange(action, details) {
+  if (!isManager()) return;
+  try {
+    await addDoc(collection(db, 'changelog'), {
+      who: (userProfile && userProfile.name) || (currentUser && currentUser.email) || 'Manager',
+      email: (currentUser && currentUser.email) || '',
+      action: action, details: details || '', isRead: false,
       createdAt: serverTimestamp()
     });
-  }catch(e){console.warn('changelog error',e);}
+  } catch(e) { console.warn('changelog error', e); }
 }
 
-function renderChangelog(){
-  const el=document.getElementById('changelog-list');
-  if(!changeLog.length){el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No changes logged yet</div></div>';return;}
-  el.innerHTML=changeLog.map(c=>`<div class="log-row" style="${!c.isRead?'background:#FFFBF0;':''}">
-    <div class="log-ico">✏️</div>
-    <div class="log-inf">
-      <div class="log-who">${escHtml(c.who)} <span style="font-size:10px;color:var(--t3);font-weight:400;">(manager)</span></div>
-      <div class="log-what"><span class="log-new">${escHtml(c.action)}</span>${c.details?' — '+escHtml(c.details):''}</div>
-      <div class="log-when">${fmtTS(c.createdAt)}</div>
-    </div>
-  </div>`).join('');
+function renderChangelog() {
+  var el = document.getElementById('changelog-list');
+  if (!changeLog.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">&#128203;</div><div class="empty-text">No changes logged yet</div></div>'; return; }
+  el.innerHTML = changeLog.map(function(c) {
+    return '<div class="log-row" style="' + (!c.isRead ? 'background:#FFFBF0;' : '') + '">' +
+      '<div class="log-ico">&#9998;</div>' +
+      '<div class="log-inf">' +
+        '<div class="log-who">' + escHtml(c.who) + ' <span style="font-size:10px;color:var(--t3);font-weight:400;">(manager)</span></div>' +
+        '<div class="log-what"><span class="log-new">' + escHtml(c.action) + '</span>' + (c.details ? ' - ' + escHtml(c.details) : '') + '</div>' +
+        '<div class="log-when">' + fmtTS(c.createdAt) + '</div>' +
+      '</div></div>';
+  }).join('');
 }
 
-window.markAlertsRead=async function(){
-  unreadAlerts=0;
-  document.getElementById('alert-count').textContent='0';
-  document.getElementById('alert-bell').style.opacity='0.5';
-  // batch mark read
-  const unread=changeLog.filter(c=>!c.isRead);
-  for(const c of unread){
-    try{await setDoc(doc(db,'changelog',c.id),{isRead:true},{merge:true});}catch(e){}
+window.markAlertsRead = async function() {
+  unreadAlerts = 0;
+  document.getElementById('alert-count').textContent = '';
+  document.getElementById('alert-bell').style.opacity = '0.5';
+  var unread = changeLog.filter(function(c) { return !c.isRead; });
+  for (var i = 0; i < unread.length; i++) {
+    try { await setDoc(doc(db, 'changelog', unread[i].id), {isRead: true}, {merge: true}); } catch(e) {}
   }
 };
+window.openChangelog = function() { switchScreen('changelog'); window.markAlertsRead(); };
 
-window.openChangelog=function(){switchScreen('changelog');markAlertsRead();};
-
-// ── RENDER ──
-function render(){
-  const te=entries.filter(e=>e.type==='expense').reduce((s,e)=>s+Number(e.amount),0);
-  const ti=entries.filter(e=>e.type==='income').reduce((s,e)=>s+Number(e.amount),0);
-  const tc=entries.filter(e=>e.type==='capital').reduce((s,e)=>s+Number(e.amount),0);
-  const net=ti-te;
-  const today=new Date().toISOString().split('T')[0];
-  const todaySales=salesRecords.filter(s=>s.date===today).reduce((s,r)=>s+Number(r.total||0),0);
-  document.getElementById('d-profit').textContent=fmtShort(net);
-  document.getElementById('d-expenses').textContent=fmtShort(te);
-  document.getElementById('d-capital').textContent=fmtShort(tc);
-  document.getElementById('d-entries').textContent=entries.length;
-  document.getElementById('d-stockitems').textContent=invItems.length;
-  document.getElementById('d-today-sales').textContent=fmtShort(todaySales);
-  document.getElementById('dash-month').textContent=new Date().toLocaleDateString('en-PH',{month:'long',year:'numeric'});
-  document.getElementById('cap-total').textContent=fmt(tc+net);
-  document.getElementById('cap-date').textContent='Updated: '+new Date().toLocaleDateString('en-PH',{month:'long',day:'numeric',year:'numeric'});
-  document.getElementById('cap-income').textContent=fmtShort(ti);
-  document.getElementById('cap-spent').textContent=fmtShort(te);
-  document.getElementById('cap-net').textContent=fmtShort(net);
-  renderBars();renderRecent();renderExpenses();renderCapital();renderReceipts();renderSalesList();renderInvoiceList();renderInvItems();renderMovements();
+// MAIN RENDER
+function render() {
+  var te = entries.filter(function(e) { return e.type === 'expense'; }).reduce(function(s,e) { return s + Number(e.amount); }, 0);
+  var ti = entries.filter(function(e) { return e.type === 'income'; }).reduce(function(s,e) { return s + Number(e.amount); }, 0);
+  var tc = entries.filter(function(e) { return e.type === 'capital'; }).reduce(function(s,e) { return s + Number(e.amount); }, 0);
+  var net = ti - te;
+  var today = new Date().toISOString().split('T')[0];
+  var todaySales = salesRecords.filter(function(s) { return s.date === today; }).reduce(function(s,r) { return s + Number(r.total || 0); }, 0);
+  document.getElementById('d-profit').textContent = fmtShort(net);
+  document.getElementById('d-expenses').textContent = fmtShort(te);
+  document.getElementById('d-capital').textContent = fmtShort(tc);
+  document.getElementById('d-entries').textContent = entries.length;
+  document.getElementById('d-stockitems').textContent = invItems.length;
+  document.getElementById('d-today-sales').textContent = fmtShort(todaySales);
+  document.getElementById('dash-month').textContent = new Date().toLocaleDateString('en-PH', {month:'long', year:'numeric'});
+  document.getElementById('cap-total').textContent = fmt(tc + net);
+  document.getElementById('cap-date').textContent = 'Updated: ' + new Date().toLocaleDateString('en-PH', {month:'long', day:'numeric', year:'numeric'});
+  document.getElementById('cap-income').textContent = fmtShort(ti);
+  document.getElementById('cap-spent').textContent = fmtShort(te);
+  document.getElementById('cap-net').textContent = fmtShort(net);
+  renderBars(); renderRecent(); renderExpenses(); renderCapital(); renderReceipts();
+  renderSalesList(); renderInvoiceList(); renderInvItems(); renderMovements();
 }
 
-function renderBars(){
-  const cats=['feeds','electricity','labor','transport','medicine','water','other'];
-  const t={};cats.forEach(c=>t[c]=0);
-  entries.filter(e=>e.type==='expense').forEach(e=>{const k=e.category&&t[e.category]!==undefined?e.category:'other';t[k]+=Number(e.amount);});
-  const max=Math.max(...Object.values(t),1);const active=cats.filter(c=>t[c]>0);
-  const el=document.getElementById('expense-bars');
-  if(!active.length){el.innerHTML='<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No expense data yet</div></div>';return;}
-  el.innerHTML='<div class="bw">'+active.map(c=>{const i=CAT[c];const p=(t[c]/max*100).toFixed(1);return`<div class="br"><div class="bl">${i.icon} ${i.label}</div><div class="bt"><div class="bf" style="width:${p}%;background:${i.bar}"></div></div><div class="bv">${fmtShort(t[c])}</div></div>`;}).join('')+'</div>';
+function renderBars() {
+  var cats = ['feeds','electricity','labor','transport','medicine','water','other'];
+  var t = {}; cats.forEach(function(c) { t[c] = 0; });
+  entries.filter(function(e) { return e.type === 'expense'; }).forEach(function(e) {
+    var k = (e.category && t[e.category] !== undefined) ? e.category : 'other'; t[k] += Number(e.amount);
+  });
+  var max = Math.max.apply(null, cats.map(function(c) { return t[c]; }).concat([1]));
+  var active = cats.filter(function(c) { return t[c] > 0; });
+  var el = document.getElementById('expense-bars');
+  if (!active.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">&#128202;</div><div class="empty-text">No expense data yet</div></div>'; return; }
+  el.innerHTML = '<div class="bw">' + active.map(function(c) {
+    var info = CAT[c]; var p = (t[c]/max*100).toFixed(1);
+    return '<div class="br"><div class="bl">' + info.icon + ' ' + info.label + '</div>' +
+      '<div class="bt"><div class="bf" style="width:' + p + '%;background:' + info.bar + '"></div></div>' +
+      '<div class="bv">' + fmtShort(t[c]) + '</div></div>';
+  }).join('') + '</div>';
 }
 
-function entryHTML(e,showDel=false){
-  const info=getInfo(e);const isExp=e.type==='expense';
-  const del=showDel&&isOwner()?`<button class="db" onclick="deleteEntry('${e.id}')">🗑</button>`:'';
-  const rcpt=e.receipt?' 📎':'';
-  return`<div class="er"><div class="ei" style="background:${info.bg}">${info.icon}</div><div class="en" onclick="${e.receipt?`viewReceipt('${e.id}')`:''}" style="${e.receipt?'cursor:pointer':''}"><div class="ena">${escHtml(e.description||info.label)}${rcpt}</div><div class="em">${fmtDate(e.date)}<span class="bdg" style="background:${info.badge};color:${info.btxt}">${info.label}</span>${e.notes?`<span>${escHtml(e.notes)}</span>`:''}</div></div><div class="ea ${isExp?'neg':'pos'}">${isExp?'−':'+'} ${fmt(e.amount)}</div>${del}</div>`;
-}
-function renderRecent(){const el=document.getElementById('recent-list');const r=[...entries].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,6);el.innerHTML=r.length?r.map(e=>entryHTML(e)).join(''):'<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">No entries yet</div></div>';}
-function renderExpenses(){const el=document.getElementById('expense-list');const active=document.querySelector('#cat-chips .chip.active')?.dataset.cat||'all';let list=entries.filter(e=>e.type==='expense');if(active!=='all')list=list.filter(e=>e.category===active);list.sort((a,b)=>(b.date||'').localeCompare(a.date||''));el.innerHTML=list.length?list.map(e=>entryHTML(e,true)).join(''):'<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No expenses found</div></div>';}
-function renderCapital(){const el=document.getElementById('capital-list');const list=entries.filter(e=>e.type==='capital'||e.type==='income').sort((a,b)=>(b.date||'').localeCompare(a.date||''));el.innerHTML=list.length?list.map(e=>entryHTML(e,true)).join(''):'<div class="empty"><div class="empty-icon">💰</div><div class="empty-text">No entries yet</div></div>';}
-function renderReceipts(){const el=document.getElementById('receipts-grid');const w=entries.filter(e=>e.receipt).sort((a,b)=>(b.date||'').localeCompare(a.date||''));if(!w.length){el.innerHTML='<div style="grid-column:1/-1" class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No receipts yet</div></div>';return;}el.innerHTML=w.map(e=>`<div class="rc" onclick="viewReceipt('${e.id}')"><div class="rth">${e.receipt.startsWith('data:image')?`<img src="${e.receipt}"/>`:'📄'}</div><div class="ri"><div class="rin">${escHtml(e.description||'Receipt')}</div><div class="rid">${fmtDate(e.date)}</div></div></div>`).join('');}
-
-// ── INVENTORY ──
-function stockStatus(item){const q=Number(item.qty)||0,lo=Number(item.lowAlert)||0;if(q<=0)return{label:'Out of stock',cls:'s-out'};if(lo>0&&q<=lo)return{label:'Low stock',cls:'s-low'};return{label:'In stock',cls:'s-ok'};}
-function renderInvItems(){
-  const el=document.getElementById('inv-items-list');
-  const low=invItems.filter(it=>Number(it.qty)<=Number(it.lowAlert||0)&&Number(it.lowAlert||0)>0).length;
-  const out=invItems.filter(it=>Number(it.qty)<=0).length;
-  document.getElementById('inv-low-count').textContent=low+out;
-  document.getElementById('inv-total-items').textContent=invItems.length;
-  if(!invItems.length){el.innerHTML='<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No items yet</div>Tap + to add</div>';return;}
-  el.innerHTML=invItems.map(item=>{
-    const cat=ICAT[item.category]||ICAT.other;const st=stockStatus(item);
-    const kgLine=item.category==='catfish'&&item.kg?` · ${Number(item.kg).toFixed(1)} kg`:'';
-    return`<div class="inv-row"><div class="inv-ico" style="background:${cat.bg}">${cat.icon}</div><div class="inv-inf"><div class="inv-nm">${escHtml(item.name)}</div><div class="inv-st"><span class="${st.cls}">${st.label}</span> · ${Number(item.qty)||0} ${escHtml(item.unit||'pcs')}${kgLine}</div>${item.notes?`<div style="font-size:11px;color:var(--t3)">${escHtml(item.notes)}</div>`:''}</div><div class="inv-acts"><button class="ib in" onclick="openMovement('${item.id}','in')">IN</button><button class="ib out" onclick="openMovement('${item.id}','out')">OUT</button><button class="ib ed" onclick="openAddItem('${item.id}')">✏️</button>${isOwner()?`<button class="ib ed" onclick="deleteItem('${item.id}')">🗑</button>`:''}</div></div>`;
-  }).join('');
-}
-function renderMovements(){
-  const el=document.getElementById('inv-movement-list');const sub=document.getElementById('inv-log-sub');
-  const recent=[...movements].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,40);
-  sub.textContent=`${movements.length} total`;
-  if(!recent.length){el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No movements yet</div></div>';return;}
-  el.innerHTML=recent.map(mv=>{
-    const item=invItems.find(i=>i.id===mv.itemId);const nm=item?item.name:(mv.itemName||'Unknown');
-    const isIn=mv.type==='in';const isAdj=mv.type==='adjustment';
-    const icon=isAdj?'🔧':isIn?'📥':'📤';const dc=isAdj?'adj':mv.type;
-    const kgPart=mv.kg?` · ${Number(mv.kg).toFixed(1)} kg`:'';const sign=isAdj?'→':isIn?'+':'-';
-    return`<div class="mv-row"><div class="mv-dir ${dc}">${icon}</div><div class="mv-inf"><div class="mv-nm">${escHtml(nm)}${mv.reason?` — ${escHtml(mv.reason)}`:''}</div><div class="mv-dt">${fmtDate(mv.date)}${kgPart}${mv.createdBy?` · ${escHtml(mv.createdBy)}`:''}</div></div><div class="mv-q ${dc}">${sign}${Number(mv.qty)||0} ${item?escHtml(item.unit||''):''}</div></div>`;
-  }).join('');
+function entryHTML(e, showDel) {
+  var info = getInfo(e); var isExp = e.type === 'expense';
+  var del = (showDel && isOwner()) ? '<button class="db" onclick="deleteEntry(\'' + e.id + '\')">&#128465;</button>' : '';
+  var rcpt = e.receipt ? ' &#128206;' : '';
+  return '<div class="er">' +
+    '<div class="ei" style="background:' + info.bg + '">' + info.icon + '</div>' +
+    '<div class="en"' + (e.receipt ? ' onclick="viewReceipt(\'' + e.id + '\')" style="cursor:pointer"' : '') + '>' +
+      '<div class="ena">' + escHtml(e.description || info.label) + rcpt + '</div>' +
+      '<div class="em">' + fmtDate(e.date) + ' <span class="bdg" style="background:' + info.badge + ';color:' + info.btxt + '">' + info.label + '</span>' + (e.notes ? ' <span>' + escHtml(e.notes) + '</span>' : '') + '</div>' +
+    '</div>' +
+    '<div class="ea ' + (isExp ? 'neg' : 'pos') + '">' + (isExp ? '-' : '+') + ' ' + fmt(e.amount) + '</div>' + del +
+  '</div>';
 }
 
-// ── SALES ──
-function getBranchList(){return branches.length?branches:DEFAULT_BRANCHES;}
-function renderBranchTabs(){
-  const list=getBranchList();
-  const tabs=document.getElementById('branch-tabs');
-  tabs.innerHTML=`<button class="brtab ${salesBranchFilter==='all'?'active':''}" data-br="all">All</button>`+list.map((b,i)=>`<button class="brtab ${salesBranchFilter===b?'active':''}" data-br="${escHtml(b)}">${escHtml(b)}</button>`).join('');
-  tabs.querySelectorAll('.brtab').forEach(btn=>{btn.addEventListener('click',()=>{salesBranchFilter=btn.dataset.br;renderBranchTabs();renderSalesList();});});
-  const bSel=document.getElementById('sale-branch');
-  if(bSel)bSel.innerHTML=list.map(b=>`<option value="${escHtml(b)}">${escHtml(b)}</option>`).join('');
-  const eSel=document.getElementById('emp-branch');
-  if(eSel)eSel.innerHTML=list.map(b=>`<option value="${escHtml(b)}">${escHtml(b)}</option>`).join('');
-  const uSel=document.getElementById('user-branch-sel');
-  if(uSel)uSel.innerHTML='<option value="">— All branches —</option>'+list.map(b=>`<option value="${escHtml(b)}">${escHtml(b)}</option>`).join('');
+function renderRecent() {
+  var el = document.getElementById('recent-list');
+  var recent = entries.slice().sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); }).slice(0, 6);
+  el.innerHTML = recent.length ? recent.map(function(e) { return entryHTML(e); }).join('') :
+    '<div class="empty"><div class="empty-icon">&#128221;</div><div class="empty-text">No entries yet</div>Tap + to add</div>';
 }
-window.applySalesFilter=function(){salesDateFrom=document.getElementById('sr-from').value;salesDateTo=document.getElementById('sr-to').value;renderSalesList();};
-function renderSalesList(){
-  const today=new Date().toISOString().split('T')[0];const mPfx=today.slice(0,7);
-  document.getElementById('sr-today').textContent=fmtShort(salesRecords.filter(s=>s.date===today).reduce((s,r)=>s+Number(r.total||0),0));
-  document.getElementById('sr-month').textContent=fmtShort(salesRecords.filter(s=>(s.date||'').startsWith(mPfx)).reduce((s,r)=>s+Number(r.total||0),0));
-  const el=document.getElementById('sales-list');
-  let list=[...salesRecords];
-  if(salesBranchFilter!=='all')list=list.filter(s=>s.branch===salesBranchFilter);
-  if(salesDateFrom)list=list.filter(s=>s.date>=salesDateFrom);
-  if(salesDateTo)list=list.filter(s=>s.date<=salesDateTo);
-  list.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No sales found</div></div>';return;}
-  const brList=getBranchList();
-  el.innerHTML=list.map(s=>{
-    const bi=brList.indexOf(s.branch);const bbCls='bb bb-'+(bi>=0?bi:3);
-    const items=(s.items||[]).map(it=>`${Number(it.qty).toFixed(1)} ${it.unit||'kg'} ${escHtml(it.name)} @ ${fmt(it.price)}`).join(' · ');
-    const canDel=isOwner()||(isManager()&&s.createdBy===currentUser?.email);
-    return`<div class="sr-row"><div class="sr-ico">📊</div><div class="sr-inf"><div class="sr-nm">${escHtml(s.customerName||'Walk-in buyer')}</div><div class="sr-mt"><span class="${bbCls}">${escHtml(s.branch||'—')}</span>${fmtDate(s.date)}<br>${items?`<span style="color:var(--t2)">${items}</span><br>`:''}<span>by ${escHtml(s.submittedBy||'—')}</span>${s.notes?`<br><span style="color:var(--t3)">${escHtml(s.notes)}</span>`:''}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;"><div class="sr-amt">${fmt(s.total)}</div>${canDel?`<button class="ib ed" onclick="deleteSale('${s.id}')">🗑</button>`:''}</div></div>`;
+function renderExpenses() {
+  var el = document.getElementById('expense-list');
+  var active = (document.querySelector('#cat-chips .chip.active') || {}).dataset || {};
+  var cat = active.cat || 'all';
+  var list = entries.filter(function(e) { return e.type === 'expense'; });
+  if (cat !== 'all') list = list.filter(function(e) { return e.category === cat; });
+  list.sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); });
+  el.innerHTML = list.length ? list.map(function(e) { return entryHTML(e, true); }).join('') :
+    '<div class="empty"><div class="empty-icon">&#129534;</div><div class="empty-text">No expenses found</div></div>';
+}
+function renderCapital() {
+  var el = document.getElementById('capital-list');
+  var list = entries.filter(function(e) { return e.type === 'capital' || e.type === 'income'; })
+    .sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); });
+  el.innerHTML = list.length ? list.map(function(e) { return entryHTML(e, true); }).join('') :
+    '<div class="empty"><div class="empty-icon">&#128176;</div><div class="empty-text">No entries yet</div></div>';
+}
+function renderReceipts() {
+  var el = document.getElementById('receipts-grid');
+  var w = entries.filter(function(e) { return e.receipt; }).sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); });
+  if (!w.length) { el.innerHTML = '<div style="grid-column:1/-1" class="empty"><div class="empty-icon">&#129534;</div><div class="empty-text">No receipts yet</div></div>'; return; }
+  el.innerHTML = w.map(function(e) {
+    return '<div class="rc" onclick="viewReceipt(\'' + e.id + '\')">' +
+      '<div class="rth">' + (e.receipt.startsWith('data:image') ? '<img src="' + e.receipt + '"/>' : '&#128196;') + '</div>' +
+      '<div class="ri"><div class="rin">' + escHtml(e.description || 'Receipt') + '</div><div class="rid">' + fmtDate(e.date) + '</div></div>' +
+    '</div>';
   }).join('');
 }
 
-// ── INVOICES ──
-function renderInvoiceList(){
-  const el=document.getElementById('invoice-list');
-  const tb=invoices.reduce((s,i)=>s+Number(i.total||0),0);
-  const pb=invoices.filter(i=>i.status==='pending').reduce((s,i)=>s+Number(i.total||0),0);
-  document.getElementById('inv-billed').textContent=fmtShort(tb);
-  document.getElementById('inv-pending-amt').textContent=fmtShort(pb);
-  if(!invoices.length){el.innerHTML='<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No invoices yet</div></div>';return;}
-  el.innerHTML=[...invoices].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(inv=>{
-    const sc=inv.status==='paid'?'paid':'pending';
-    return`<div class="ivl-row" onclick="viewInvoice('${inv.id}')"><div style="width:40px;height:40px;border-radius:11px;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🧾</div><div class="ivl-inf"><div class="ivl-nm">${escHtml(inv.customerName||'Customer')}</div><div class="ivl-mt">${fmtDate(inv.date)} · INV-${String(inv.invoiceNo||'').padStart(3,'0')}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;"><div class="ivl-amt">${fmt(inv.total)}</div><span class="ivl-st ${sc}">${inv.status==='paid'?'✅ Paid':'⏳ Pending'}</span></div></div>`;
+// INVENTORY
+function stockStatus(item) {
+  var q = Number(item.qty) || 0, lo = Number(item.lowAlert) || 0;
+  if (q <= 0) return {label:'Out of stock', cls:'s-out'};
+  if (lo > 0 && q <= lo) return {label:'Low stock', cls:'s-low'};
+  return {label:'In stock', cls:'s-ok'};
+}
+function renderInvItems() {
+  var el = document.getElementById('inv-items-list');
+  var low = invItems.filter(function(it) { return Number(it.qty) <= Number(it.lowAlert||0) && Number(it.lowAlert||0) > 0; }).length;
+  var out = invItems.filter(function(it) { return Number(it.qty) <= 0; }).length;
+  document.getElementById('inv-low-count').textContent = low + out;
+  document.getElementById('inv-total-items').textContent = invItems.length;
+  if (!invItems.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">&#128230;</div><div class="empty-text">No items yet</div>Tap + to add</div>'; return; }
+  el.innerHTML = invItems.map(function(item) {
+    var cat = ICAT[item.category] || ICAT.other; var st = stockStatus(item);
+    var kgLine = (item.category === 'catfish' && item.kg) ? ' - ' + Number(item.kg).toFixed(1) + ' kg' : '';
+    var delBtn = isOwner() ? '<button class="ib ed" onclick="deleteItem(\'' + item.id + '\')">&#128465;</button>' : '';
+    return '<div class="inv-row">' +
+      '<div class="inv-ico" style="background:' + cat.bg + '">' + cat.icon + '</div>' +
+      '<div class="inv-inf"><div class="inv-nm">' + escHtml(item.name) + '</div>' +
+        '<div class="inv-st"><span class="' + st.cls + '">' + st.label + '</span> - ' + (Number(item.qty)||0) + ' ' + escHtml(item.unit||'pcs') + kgLine + '</div>' +
+        (item.notes ? '<div style="font-size:11px;color:var(--t3)">' + escHtml(item.notes) + '</div>' : '') +
+      '</div>' +
+      '<div class="inv-acts">' +
+        '<button class="ib in" onclick="openMovement(\'' + item.id + '\',\'in\')">IN</button>' +
+        '<button class="ib out" onclick="openMovement(\'' + item.id + '\',\'out\')">OUT</button>' +
+        '<button class="ib ed" onclick="openAddItem(\'' + item.id + '\')">&#9998;</button>' + delBtn +
+      '</div></div>';
+  }).join('');
+}
+function renderMovements() {
+  var el = document.getElementById('inv-movement-list');
+  var sub = document.getElementById('inv-log-sub');
+  var recent = movements.slice().sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); }).slice(0, 40);
+  sub.textContent = movements.length + ' total';
+  if (!recent.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">&#128203;</div><div class="empty-text">No movements yet</div></div>'; return; }
+  el.innerHTML = recent.map(function(mv) {
+    var item = invItems.find(function(i) { return i.id === mv.itemId; });
+    var nm = item ? item.name : (mv.itemName || 'Unknown');
+    var isIn = mv.type === 'in'; var isAdj = mv.type === 'adjustment';
+    var icon = isAdj ? '&#128295;' : isIn ? '&#128229;' : '&#128228;';
+    var dc = isAdj ? 'adj' : mv.type;
+    var kgPart = mv.kg ? ' - ' + Number(mv.kg).toFixed(1) + ' kg' : '';
+    var sign = isAdj ? '>' : isIn ? '+' : '-';
+    return '<div class="mv-row">' +
+      '<div class="mv-dir ' + dc + '">' + icon + '</div>' +
+      '<div class="mv-inf"><div class="mv-nm">' + escHtml(nm) + (mv.reason ? ' - ' + escHtml(mv.reason) : '') + '</div>' +
+        '<div class="mv-dt">' + fmtDate(mv.date) + kgPart + (mv.createdBy ? ' - ' + escHtml(mv.createdBy) : '') + '</div>' +
+      '</div>' +
+      '<div class="mv-q ' + dc + '">' + sign + (Number(mv.qty)||0) + ' ' + (item ? escHtml(item.unit||'') : '') + '</div>' +
+    '</div>';
   }).join('');
 }
 
-// ── TIMESHEET ──
-function renderEmployeeList(){
-  const el=document.getElementById('emp-list');
-  document.getElementById('ts-emp-count').textContent=employees.length;
-  const now=new Date();const mPfx=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  const monthOT=timeLogs.filter(t=>(t.date||'').startsWith(mPfx)).reduce((s,t)=>s+Number(t.overtime||0),0);
-  document.getElementById('ts-ot-total').textContent=monthOT.toFixed(1)+' hrs';
-  if(!employees.length){el.innerHTML='<div class="empty"><div class="empty-icon">👷</div><div class="empty-text">No employees yet</div>Tap + to add</div>';return;}
-  el.innerHTML=employees.map(emp=>{
-    const empLogs=timeLogs.filter(t=>t.empId===emp.id);
-    const mLogs=empLogs.filter(t=>(t.date||'').startsWith(mPfx));
-    const present=mLogs.filter(t=>t.status==='present'||t.status==='late'||t.status==='halfday').length;
-    const absent=mLogs.filter(t=>t.status==='absent').length;
-    const ot=mLogs.reduce((s,t)=>s+Number(t.overtime||0),0);
-    const initials=emp.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-    // hide daily rate from manager
-    const rateInfo=isOwner()?`<div class="emp-sl">${fmt(emp.dailyRate||0)}/day</div>`:'';
-    return`<div class="emp-card" onclick="openEmpDetail('${emp.id}')"><div class="emp-avatar">${initials}</div><div class="emp-inf"><div class="emp-nm">${escHtml(emp.name)}</div><div class="emp-role-lbl">${escHtml(emp.role||'—')} · ${escHtml(emp.branch||'—')}</div></div><div class="emp-stats"><div class="emp-sv">${present}d present</div><div class="emp-sl">${absent} absent · ${ot.toFixed(1)}h OT</div>${rateInfo}</div></div>`;
+// SALES
+function getBranchList() { return branches.length ? branches : DEFAULT_BRANCHES; }
+function renderBranchTabs() {
+  var list = getBranchList();
+  var tabs = document.getElementById('branch-tabs');
+  tabs.innerHTML = '<button class="brtab ' + (salesBranchFilter === 'all' ? 'active' : '') + '" data-br="all">All</button>' +
+    list.map(function(b, i) {
+      return '<button class="brtab ' + (salesBranchFilter === b ? 'active' : '') + '" data-br="' + escHtml(b) + '">' + escHtml(b) + '</button>';
+    }).join('');
+  tabs.querySelectorAll('.brtab').forEach(function(btn) {
+    btn.addEventListener('click', function() { salesBranchFilter = btn.dataset.br; renderBranchTabs(); renderSalesList(); });
+  });
+  var selIds = ['sale-branch', 'emp-branch', 'user-branch-sel'];
+  selIds.forEach(function(id) {
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    var prefix = id === 'user-branch-sel' ? '<option value="">-- All branches --</option>' : '';
+    sel.innerHTML = prefix + list.map(function(b) { return '<option value="' + escHtml(b) + '">' + escHtml(b) + '</option>'; }).join('');
+  });
+}
+window.applySalesFilter = function() {
+  salesDateFrom = document.getElementById('sr-from').value;
+  salesDateTo = document.getElementById('sr-to').value;
+  renderSalesList();
+};
+function renderSalesList() {
+  var today = new Date().toISOString().split('T')[0]; var mPfx = today.slice(0, 7);
+  document.getElementById('sr-today').textContent = fmtShort(salesRecords.filter(function(s) { return s.date === today; }).reduce(function(s,r) { return s + Number(r.total||0); }, 0));
+  document.getElementById('sr-month').textContent = fmtShort(salesRecords.filter(function(s) { return (s.date||'').startsWith(mPfx); }).reduce(function(s,r) { return s + Number(r.total||0); }, 0));
+  var el = document.getElementById('sales-list');
+  var list = salesRecords.slice();
+  if (salesBranchFilter !== 'all') list = list.filter(function(s) { return s.branch === salesBranchFilter; });
+  if (salesDateFrom) list = list.filter(function(s) { return s.date >= salesDateFrom; });
+  if (salesDateTo) list = list.filter(function(s) { return s.date <= salesDateTo; });
+  list.sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); });
+  if (!list.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">&#128202;</div><div class="empty-text">No sales found</div></div>'; return; }
+  var brList = getBranchList();
+  el.innerHTML = list.map(function(s) {
+    var bi = brList.indexOf(s.branch);
+    var bbCls = 'bb bb-' + (bi >= 0 ? bi : 3);
+    var items = (s.items||[]).map(function(it) { return Number(it.qty).toFixed(1) + ' ' + (it.unit||'kg') + ' ' + escHtml(it.name) + ' @ ' + fmt(it.price); }).join(', ');
+    var canDel = isOwner() || (isManager() && s.createdBy === currentUser.email);
+    var delBtn = canDel ? '<button class="ib ed" onclick="deleteSale(\'' + s.id + '\')">&#128465;</button>' : '';
+    return '<div class="sr-row">' +
+      '<div class="sr-ico">&#128202;</div>' +
+      '<div class="sr-inf"><div class="sr-nm">' + escHtml(s.customerName||'Walk-in buyer') + '</div>' +
+        '<div class="sr-mt"><span class="' + bbCls + '">' + escHtml(s.branch||'-') + '</span> ' + fmtDate(s.date) + '<br>' +
+          (items ? '<span style="color:var(--t2)">' + items + '</span><br>' : '') +
+          'by ' + escHtml(s.submittedBy||'-') + (s.notes ? '<br><span style="color:var(--t3)">' + escHtml(s.notes) + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' +
+        '<div class="sr-amt">' + fmt(s.total) + '</div>' + delBtn +
+      '</div></div>';
   }).join('');
 }
 
-function renderStaffTimesheetView(){
-  // Show this employee's own records
-  const myEmp=employees.find(e=>e.linkedEmail===currentUser?.email);
-  const nameEl=document.getElementById('my-qr-name');
-  const roleEl=document.getElementById('my-qr-role');
-  if(myEmp){
-    nameEl.textContent=myEmp.name;
-    roleEl.textContent=(myEmp.role||'Staff')+(myEmp.branch?' · '+myEmp.branch:'');
+// INVOICES
+function renderInvoiceList() {
+  var el = document.getElementById('invoice-list');
+  var tb = invoices.reduce(function(s,i) { return s + Number(i.total||0); }, 0);
+  var pb = invoices.filter(function(i) { return i.status === 'pending'; }).reduce(function(s,i) { return s + Number(i.total||0); }, 0);
+  document.getElementById('inv-billed').textContent = fmtShort(tb);
+  document.getElementById('inv-pending-amt').textContent = fmtShort(pb);
+  if (!invoices.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">&#129534;</div><div class="empty-text">No invoices yet</div></div>'; return; }
+  el.innerHTML = invoices.slice().sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); }).map(function(inv) {
+    var sc = inv.status === 'paid' ? 'paid' : 'pending';
+    return '<div class="ivl-row" onclick="viewInvoice(\'' + inv.id + '\')">' +
+      '<div style="width:40px;height:40px;border-radius:11px;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">&#129534;</div>' +
+      '<div class="ivl-inf"><div class="ivl-nm">' + escHtml(inv.customerName||'Customer') + '</div>' +
+        '<div class="ivl-mt">' + fmtDate(inv.date) + ' - INV-' + String(inv.invoiceNo||'').padStart(3,'0') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' +
+        '<div class="ivl-amt">' + fmt(inv.total) + '</div>' +
+        '<span class="ivl-st ' + sc + '">' + (inv.status === 'paid' ? 'Paid' : 'Pending') + '</span>' +
+      '</div></div>';
+  }).join('');
+}
+
+// TIMESHEET
+function renderEmployeeList() {
+  var el = document.getElementById('emp-list');
+  document.getElementById('ts-emp-count').textContent = employees.length;
+  var now = new Date(); var mPfx = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  var monthOT = timeLogs.filter(function(t) { return (t.date||'').startsWith(mPfx); }).reduce(function(s,t) { return s + Number(t.overtime||0); }, 0);
+  document.getElementById('ts-ot-total').textContent = monthOT.toFixed(1) + ' hrs';
+  if (!employees.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">&#128119;</div><div class="empty-text">No employees yet</div>Tap + to add</div>'; return; }
+  el.innerHTML = employees.map(function(emp) {
+    var empLogs = timeLogs.filter(function(t) { return t.empId === emp.id; });
+    var mLogs = empLogs.filter(function(t) { return (t.date||'').startsWith(mPfx); });
+    var present = mLogs.filter(function(t) { return t.status === 'present' || t.status === 'late' || t.status === 'halfday'; }).length;
+    var absent = mLogs.filter(function(t) { return t.status === 'absent'; }).length;
+    var ot = mLogs.reduce(function(s,t) { return s + Number(t.overtime||0); }, 0);
+    var initials = emp.name.split(' ').map(function(w) { return w[0]; }).join('').toUpperCase().slice(0, 2);
+    var rateInfo = isOwner() ? '<div class="emp-sl">' + fmt(emp.dailyRate||0) + '/day</div>' : '';
+    return '<div class="emp-card" onclick="openEmpDetail(\'' + emp.id + '\')">' +
+      '<div class="emp-avatar">' + initials + '</div>' +
+      '<div class="emp-inf"><div class="emp-nm">' + escHtml(emp.name) + '</div>' +
+        '<div class="emp-role-lbl">' + escHtml(emp.role||'-') + ' - ' + escHtml(emp.branch||'-') + '</div>' +
+      '</div>' +
+      '<div class="emp-stats"><div class="emp-sv">' + present + 'd present</div>' +
+        '<div class="emp-sl">' + absent + ' absent - ' + ot.toFixed(1) + 'h OT</div>' + rateInfo +
+      '</div></div>';
+  }).join('');
+}
+
+function renderStaffView() {
+  var myEmp = employees.find(function(e) { return e.linkedEmail === currentUser.email; });
+  var nameEl = document.getElementById('my-qr-name');
+  var roleEl = document.getElementById('my-qr-role');
+  if (myEmp) {
+    nameEl.textContent = myEmp.name;
+    roleEl.textContent = (myEmp.role||'Staff') + (myEmp.branch ? ' - ' + myEmp.branch : '');
     generateQR('my-qr-canvas', myEmp.id, 160);
-    // show own logs
-    const now=new Date();const mPfx=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-    const logs=timeLogs.filter(t=>t.empId===myEmp.id&&(t.date||'').startsWith(mPfx)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-    const el=document.getElementById('staff-ts-list');
-    el.innerHTML=logs.length?logs.map(log=>tsLogHTML(log)).join(''):'<div class="empty"><div class="empty-icon">🕐</div><div class="empty-text">No records this month</div></div>';
+    var now = new Date(); var mPfx = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+    var logs = timeLogs.filter(function(t) { return t.empId === myEmp.id && (t.date||'').startsWith(mPfx); })
+      .sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); });
+    document.getElementById('staff-ts-list').innerHTML = logs.length ? logs.map(tsLogHTML).join('') :
+      '<div class="empty"><div class="empty-icon">&#128336;</div><div class="empty-text">No records this month</div></div>';
   } else {
-    nameEl.textContent=userProfile?.name||currentUser?.email||'Staff';
-    roleEl.textContent='No employee record linked yet';
-    document.getElementById('staff-ts-list').innerHTML='<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Not linked to an employee</div>Ask the owner to link your account.</div>';
+    nameEl.textContent = (userProfile && userProfile.name) || (currentUser && currentUser.email) || 'Staff';
+    roleEl.textContent = 'No employee record linked yet. Ask owner to link your account.';
+    document.getElementById('staff-ts-list').innerHTML = '<div class="empty"><div class="empty-icon">&#128279;</div><div class="empty-text">Not linked to an employee</div>Ask the owner to add your login email to your employee record.</div>';
   }
 }
 
-function tsLogHTML(log){
-  const dt=new Date(log.date+'T00:00:00');
-  const day=dt.getDate();const mon=dt.toLocaleDateString('en-PH',{month:'short'});
-  const stMap={present:'ts-p present',absent:'ts-a absent',late:'ts-l late',halfday:'ts-p half day'};
-  const stCls=stMap[log.status]||'ts-p';const stParts=stCls.split(' ');
-  const badgeCls=stParts[0];const badgeTxt=stParts.slice(1).join(' ')||log.status;
-  const timeStr=log.timeIn&&log.timeOut?`${log.timeIn} – ${log.timeOut}`:(log.timeIn?`In: ${log.timeIn}`:'');
-  const hrs=calcHours(log.timeIn,log.timeOut);
-  const otBadge=Number(log.overtime)>0?`<span class="ts-b ts-ot">+${Number(log.overtime)}h OT</span>`:'';
-  const canDel=isOwner()||isManager();
-  return`<div class="ts-row"><div class="ts-date"><div class="ts-dd">${day}</div><div class="ts-dm">${mon}</div></div><div class="ts-inf"><div class="ts-times"><span class="ts-b ${badgeCls}">${badgeTxt}</span> ${otBadge}</div><div class="ts-meta">${timeStr}${log.notes?` · ${escHtml(log.notes)}`:''}</div></div><div class="ts-hrs">${hrs?hrs+' h':''}<br>${canDel?`<button class="ib ed" style="margin-top:4px;" onclick="deleteTimeLog('${log.id}')">🗑</button>`:''}</div></div>`;
+function tsLogHTML(log) {
+  var dt = new Date(log.date + 'T00:00:00');
+  var day = dt.getDate(); var mon = dt.toLocaleDateString('en-PH', {month:'short'});
+  var stMap = {present:'ts-p present', absent:'ts-a absent', late:'ts-l late', halfday:'ts-p half day'};
+  var stCls = stMap[log.status] || 'ts-p'; var stParts = stCls.split(' ');
+  var badgeCls = stParts[0]; var badgeTxt = stParts.slice(1).join(' ') || log.status;
+  var timeStr = (log.timeIn && log.timeOut) ? log.timeIn + ' - ' + log.timeOut : (log.timeIn ? 'In: ' + log.timeIn : '');
+  var hrs = calcHours(log.timeIn, log.timeOut);
+  var otBadge = Number(log.overtime) > 0 ? '<span class="ts-b ts-ot">+' + Number(log.overtime) + 'h OT</span>' : '';
+  var canDel = isOwner() || isManager();
+  var delBtn = canDel ? '<button class="ib ed" style="margin-top:4px;" onclick="deleteTimeLog(\'' + log.id + '\')">&#128465;</button>' : '';
+  return '<div class="ts-row">' +
+    '<div class="ts-date"><div class="ts-dd">' + day + '</div><div class="ts-dm">' + mon + '</div></div>' +
+    '<div class="ts-inf">' +
+      '<div class="ts-times"><span class="ts-b ' + badgeCls + '">' + badgeTxt + '</span> ' + otBadge + '</div>' +
+      '<div class="ts-meta">' + timeStr + (log.notes ? ' - ' + escHtml(log.notes) : '') + '</div>' +
+    '</div>' +
+    '<div class="ts-hrs">' + (hrs ? hrs + ' h' : '') + '<br>' + delBtn + '</div>' +
+  '</div>';
 }
 
-function calcHours(ti,to){if(!ti||!to)return null;const[h1,m1]=ti.split(':').map(Number);const[h2,m2]=to.split(':').map(Number);const mins=(h2*60+m2)-(h1*60+m1);if(mins<=0)return null;return(mins/60).toFixed(1);}
-
-// ── USER MANAGEMENT ──
-function renderUsers(){
-  const el=document.getElementById('users-list');
-  if(!userProfiles.length){el.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">No users yet</div>Tap "+ Add user"</div>';return;}
-  el.innerHTML=userProfiles.map(u=>{
-    const rMap={owner:'rb-owner 👑 Owner',manager:'rb-manager 🏢 Manager',staff:'rb-staff 👷 Staff'};
-    const rInfo=(rMap[u.role]||'rb-staff 👷 Staff').split(' ');
-    const cls=rInfo[0];const txt=rInfo.slice(1).join(' ');
-    return`<div class="er"><div class="ei" style="background:var(--sf2);font-size:20px;">👤</div><div class="en"><div class="ena">${escHtml(u.name||u.email)}</div><div class="em">${escHtml(u.email||'')} · <span class="bdg ${cls}">${txt}</span>${u.branch?` · ${escHtml(u.branch)}`:''}</div></div><div style="display:flex;gap:6px;"><button class="ib ed" onclick="openEditUser('${u.id}')">✏️</button><button class="ib ed" onclick="deleteUser('${u.id}')">🗑</button></div></div>`;
+// USER MANAGEMENT
+function renderUsers() {
+  var el = document.getElementById('users-list');
+  if (!userProfiles.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">&#128101;</div><div class="empty-text">No users yet</div>Tap + Add user</div>'; return; }
+  el.innerHTML = userProfiles.map(function(u) {
+    var rCls = {owner:'rb-owner', manager:'rb-manager', staff:'rb-staff'}[u.role] || 'rb-staff';
+    var rTxt = {owner:'Owner', manager:'Manager', staff:'Staff'}[u.role] || 'Staff';
+    return '<div class="er">' +
+      '<div class="ei" style="background:var(--sf2);font-size:20px;">&#128100;</div>' +
+      '<div class="en"><div class="ena">' + escHtml(u.name||u.email) + '</div>' +
+        '<div class="em">' + escHtml(u.email||'') + ' <span class="bdg ' + rCls + '">' + rTxt + '</span>' + (u.branch ? ' - ' + escHtml(u.branch) : '') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;">' +
+        '<button class="ib ed" onclick="openEditUser(\'' + u.id + '\')">&#9998;</button>' +
+        '<button class="ib ed" onclick="deleteUser(\'' + u.id + '\')">&#128465;</button>' +
+      '</div></div>';
   }).join('');
-  // branch summary
-  const brEl=document.getElementById('branch-summary');
-  const list=getBranchList();
-  brEl.innerHTML=list.length?list.map((b,i)=>`<div class="er"><div class="ei" style="background:var(--sf2)">🏗</div><div class="en"><div class="ena">${escHtml(b)}</div><div class="em">${employees.filter(e=>e.branch===b).length} employees</div></div></div>`).join(''):'<div class="empty"><div class="empty-icon">🏗</div><div class="empty-text">No branches yet</div></div>';
+  var brEl = document.getElementById('branch-summary');
+  var list = getBranchList();
+  brEl.innerHTML = list.map(function(b) {
+    var cnt = employees.filter(function(e) { return e.branch === b; }).length;
+    return '<div class="er"><div class="ei" style="background:var(--sf2)">&#127959;</div>' +
+      '<div class="en"><div class="ena">' + escHtml(b) + '</div><div class="em">' + cnt + ' employees</div></div></div>';
+  }).join('');
 }
-
-window.openAddUser=function(){
-  editingUserId=null;
-  document.getElementById('add-user-title').textContent='Add user';
-  document.getElementById('user-email').value='';
-  document.getElementById('user-display').value='';
-  document.getElementById('user-role').value='staff';
+window.openAddUser = function() {
+  editingUserId = null;
+  document.getElementById('add-user-title').textContent = 'Add user';
+  document.getElementById('user-email').value = '';
+  document.getElementById('user-display').value = '';
+  document.getElementById('user-role').value = 'staff';
   renderBranchTabs();
   document.getElementById('modal-add-user').classList.add('open');
 };
-window.openEditUser=function(id){
-  editingUserId=id;
-  const u=userProfiles.find(x=>x.id===id);if(!u)return;
-  document.getElementById('add-user-title').textContent='Edit user';
-  document.getElementById('user-email').value=u.email||'';
-  document.getElementById('user-display').value=u.name||'';
-  document.getElementById('user-role').value=u.role||'staff';
+window.openEditUser = function(id) {
+  editingUserId = id;
+  var u = userProfiles.find(function(x) { return x.id === id; }); if (!u) return;
+  document.getElementById('add-user-title').textContent = 'Edit user';
+  document.getElementById('user-email').value = u.email || '';
+  document.getElementById('user-display').value = u.name || '';
+  document.getElementById('user-role').value = u.role || 'staff';
   renderBranchTabs();
-  setTimeout(()=>{const s=document.getElementById('user-branch-sel');if(s&&u.branch)s.value=u.branch;},50);
+  setTimeout(function() { var s = document.getElementById('user-branch-sel'); if (s && u.branch) s.value = u.branch; }, 50);
   document.getElementById('modal-add-user').classList.add('open');
 };
-window.saveUser=async function(){
-  const email=document.getElementById('user-email').value.trim();
-  const name=document.getElementById('user-display').value.trim();
-  const roleVal=document.getElementById('user-role').value;
-  const branch=document.getElementById('user-branch-sel').value;
-  if(!email||!name){showToast('Please fill in email and name');return;}
-  const btn=document.getElementById('user-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
-  try{
-    const data={email,name,role:roleVal,branch:branch||null,updatedAt:serverTimestamp()};
-    if(editingUserId){await setDoc(doc(db,'userProfiles',editingUserId),data,{merge:true});}
-    else{await addDoc(collection(db,'userProfiles'),{...data,createdAt:serverTimestamp()});}
-    document.getElementById('modal-add-user').classList.remove('open');showToast('✓ User saved!');
-  }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Save user';}
+window.saveUser = async function() {
+  var email = document.getElementById('user-email').value.trim();
+  var name = document.getElementById('user-display').value.trim();
+  var roleVal = document.getElementById('user-role').value;
+  var branch = document.getElementById('user-branch-sel').value;
+  if (!email || !name) { showToast('Please fill in email and name'); return; }
+  var btn = document.getElementById('user-save-btn'); btn.disabled = true; btn.innerHTML = '<span class="sp"></span>';
+  try {
+    var data = {email:email, name:name, role:roleVal, branch:branch||null, updatedAt:serverTimestamp()};
+    if (editingUserId) { await setDoc(doc(db,'userProfiles',editingUserId), data, {merge:true}); }
+    else { await addDoc(collection(db,'userProfiles'), Object.assign({}, data, {createdAt:serverTimestamp()})); }
+    document.getElementById('modal-add-user').classList.remove('open'); showToast('User saved!');
+  } catch(err) { showToast('Error: ' + err.message); }
+  finally { btn.disabled = false; btn.textContent = 'Save user'; }
 };
-window.deleteUser=async function(id){if(!confirm('Remove this user?'))return;try{await deleteDoc(doc(db,'userProfiles',id));showToast('User removed');}catch(err){showToast('Error: '+err.message);}};
+window.deleteUser = async function(id) {
+  if (!confirm('Remove this user?')) return;
+  try { await deleteDoc(doc(db,'userProfiles',id)); showToast('User removed'); } catch(err) { showToast('Error: ' + err.message); }
+};
 
-// ── BRANCH MGMT ──
-window.openBranchMgmt=function(){renderBranchMgmt();document.getElementById('modal-branches').classList.add('open');};
-function renderBranchMgmt(){
-  const list=getBranchList();
-  const el=document.getElementById('branch-list-mgmt');
-  el.innerHTML=list.map(b=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd);"><span style="flex:1;font-size:14px;font-weight:500;">${escHtml(b)}</span><button class="ib ed" onclick="deleteBranch('${escHtml(b)}')">🗑</button></div>`).join('')||'<div style="font-size:13px;color:var(--t3);padding:8px 0;">No branches yet</div>';
+// BRANCH MGMT
+window.openBranchMgmt = function() { renderBranchMgmt(); document.getElementById('modal-branches').classList.add('open'); };
+function renderBranchMgmt() {
+  var list = getBranchList();
+  var el = document.getElementById('branch-list-mgmt');
+  el.innerHTML = list.map(function(b) {
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd);">' +
+      '<span style="flex:1;font-size:14px;font-weight:500;">' + escHtml(b) + '</span>' +
+      '<button class="ib ed" onclick="deleteBranch(\'' + escHtml(b) + '\')">&#128465;</button></div>';
+  }).join('') || '<div style="font-size:13px;color:var(--t3);padding:8px 0;">No branches yet</div>';
 }
-window.addBranch=async function(){
-  const nm=document.getElementById('new-branch-name').value.trim();
-  if(!nm){showToast('Enter a branch name');return;}
-  const list=[...getBranchList()];if(list.includes(nm)){showToast('Already exists');return;}
+window.addBranch = async function() {
+  var nm = document.getElementById('new-branch-name').value.trim();
+  if (!nm) { showToast('Enter a branch name'); return; }
+  var list = getBranchList().slice();
+  if (list.indexOf(nm) >= 0) { showToast('Already exists'); return; }
   list.push(nm);
-  try{await setDoc(doc(db,'settings','branches'),{list,updatedAt:serverTimestamp()},{merge:true});document.getElementById('new-branch-name').value='';showToast('✓ Branch added!');}catch(err){showToast('Error: '+err.message);}
+  try { await setDoc(doc(db,'settings','branches'), {list:list, updatedAt:serverTimestamp()}, {merge:true}); document.getElementById('new-branch-name').value = ''; showToast('Branch added!'); }
+  catch(err) { showToast('Error: ' + err.message); }
 };
-window.deleteBranch=async function(name){
-  if(!confirm('Remove branch "'+name+'"?'))return;
-  const list=getBranchList().filter(b=>b!==name);
-  try{await setDoc(doc(db,'settings','branches'),{list,updatedAt:serverTimestamp()},{merge:true});showToast('Branch removed');renderBranchMgmt();}catch(err){showToast('Error: '+err.message);}
+window.deleteBranch = async function(name) {
+  if (!confirm('Remove branch "' + name + '"?')) return;
+  var list = getBranchList().filter(function(b) { return b !== name; });
+  try { await setDoc(doc(db,'settings','branches'), {list:list, updatedAt:serverTimestamp()}, {merge:true}); showToast('Branch removed'); renderBranchMgmt(); }
+  catch(err) { showToast('Error: ' + err.message); }
 };
 
-// ── QR CODE ──
-function generateQR(canvasId, empId, size=200){
-  const canvas=document.getElementById(canvasId);if(!canvas)return;
-  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
-  canvas.width=size;canvas.height=size;
-  // URL = app URL + ?emp=ID so scanning it opens the app and auto-selects the employee
-  const url=window.location.href.split('?')[0]+'?emp='+empId;
-  try{
-    new QRCode(canvas,{text:url,width:size,height:size,colorDark:'#0F6E56',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
-  }catch(e){
-    // fallback: draw a simple label
-    ctx.fillStyle='#0F6E56';ctx.font='12px DM Sans';ctx.textAlign='center';ctx.fillText('QR: '+empId.slice(0,8),size/2,size/2);
+// QR CODE
+function generateQR(canvasId, empId, size) {
+  size = size || 200;
+  var canvas = document.getElementById(canvasId); if (!canvas) return;
+  canvas.width = size; canvas.height = size;
+  var url = window.location.href.split('?')[0] + '?emp=' + empId;
+  try { new QRCode(canvas, {text:url, width:size, height:size, colorDark:'#0F6E56', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M}); }
+  catch(e) { var ctx = canvas.getContext('2d'); ctx.fillStyle='#0F6E56'; ctx.font='12px sans-serif'; ctx.textAlign='center'; ctx.fillText('QR: ' + empId.slice(0,8), size/2, size/2); }
+}
+function checkQRLogin() {
+  var params = new URLSearchParams(window.location.search);
+  var empId = params.get('emp');
+  if (empId) window._qrEmpId = empId;
+}
+window.printEmpQR = function() {
+  var emp = employees.find(function(e) { return e.id === currentEmpId; }); if (!emp) return;
+  var canvas = document.getElementById('emp-qr-canvas'); if (!canvas) return;
+  var win = window.open('', '_blank');
+  if (!win) { showToast('Allow pop-ups to print QR'); return; }
+  win.document.write(
+    '<html><body style="display:flex;flex-direction:column;align-items:center;padding:40px;font-family:sans-serif;">' +
+    '<div style="font-size:20px;font-weight:700;margin-bottom:4px;">' + escHtml(emp.name) + '</div>' +
+    '<div style="font-size:14px;color:#5A5A56;margin-bottom:20px;">' + escHtml(emp.role||'Staff') + ' - ' + escHtml(emp.branch||'-') + '</div>' +
+    '<img src="' + canvas.toDataURL() + '" style="width:200px;height:200px;border:2px solid #0F6E56;border-radius:12px;"/>' +
+    '<div style="margin-top:16px;font-size:12px;color:#9A9A94;">Scan to clock in/out - CatFish Farm</div>' +
+    '<scr' + 'ipt>window.print();<\/scr' + 'ipt></body></html>'
+  );
+};
+
+// CLOCK IN/OUT
+function startClock() {
+  function tick() {
+    var now = new Date();
+    var el = document.getElementById('clk-time');
+    if (el) el.textContent = now.toLocaleTimeString('en-PH', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    var de = document.getElementById('clk-date');
+    if (de) de.textContent = now.toLocaleDateString('en-PH', {weekday:'long', month:'long', day:'numeric', year:'numeric'});
   }
+  tick(); clockTimer = setInterval(tick, 1000);
 }
-window.printEmpQR=function(){
-  const emp=employees.find(e=>e.id===currentEmpId);if(!emp)return;
-  const canvas=document.getElementById('emp-qr-canvas');if(!canvas)return;
-  const win=window.open('','_blank');
-  win.document.write(`<html><body style="display:flex;flex-direction:column;align-items:center;padding:40px;font-family:DM Sans,sans-serif;">
-    <div style="font-size:32px;margin-bottom:8px;">🐟</div>
-    <div style="font-size:20px;font-weight:700;margin-bottom:4px;">${escHtml(emp.name)}</div>
-    <div style="font-size:14px;color:#5A5A56;margin-bottom:20px;">${escHtml(emp.role||'Staff')} · ${escHtml(emp.branch||'—')}</div>
-    <img src="${canvas.toDataURL()}" style="width:200px;height:200px;border:2px solid #0F6E56;border-radius:12px;"/>
-    <div style="margin-top:16px;font-size:12px;color:#9A9A94;">Scan QR code to clock in/out</div>
-    <div style="margin-top:4px;font-size:11px;color:#9A9A94;">CatFish Farm</div>
-    <scr'+'ipt>window.print();<\/scr'+'ipt>
-  </body></html>`);
-};
-
-// QR scan on login (URL param ?emp=ID)
-function checkQRLogin(){
-  const params=new URLSearchParams(window.location.search);
-  const empId=params.get('emp');
-  if(empId) window._qrEmpId=empId;
-}
-
-// ── CLOCK IN/OUT ──
-let clockTimer=null;
-function startClock(){
-  const tick=()=>{
-    const now=new Date();
-    document.getElementById('clk-time').textContent=now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    document.getElementById('clk-date').textContent=now.toLocaleDateString('en-PH',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  };
-  tick();clockTimer=setInterval(tick,1000);
-}
-function stopClock(){if(clockTimer){clearInterval(clockTimer);clockTimer=null;}}
-
-function openClockScreen(){
-  const emp=getMyEmployee();
-  if(!emp&&!window._qrEmpId){showToast('No employee record found');return;}
-  const empToUse=emp||employees.find(e=>e.id===window._qrEmpId);
-  if(!empToUse){showToast('Employee not found');return;}
-  const initials=empToUse.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  document.getElementById('clk-avatar').textContent=initials;
-  document.getElementById('clk-name').textContent=empToUse.name;
-  document.getElementById('clk-role').textContent=(empToUse.role||'Staff')+(empToUse.branch?' · '+empToUse.branch:'');
-  // check today's log
-  const today=new Date().toISOString().split('T')[0];
-  const todayLog=timeLogs.find(t=>t.empId===empToUse.id&&t.date===today);
-  updateClockUI(todayLog, empToUse.id);
+function stopClock() { if (clockTimer) { clearInterval(clockTimer); clockTimer = null; } }
+function getMyEmployee() { return employees.find(function(e) { return e.linkedEmail === currentUser.email; }); }
+function openClockScreen() {
+  var emp = getMyEmployee() || employees.find(function(e) { return e.id === window._qrEmpId; });
+  if (!emp) { showToast('No employee record found. Ask owner to link your account.'); return; }
+  var initials = emp.name.split(' ').map(function(w) { return w[0]; }).join('').toUpperCase().slice(0,2);
+  document.getElementById('clk-avatar').textContent = initials;
+  document.getElementById('clk-name').textContent = emp.name;
+  document.getElementById('clk-role').textContent = (emp.role||'Staff') + (emp.branch ? ' - ' + emp.branch : '');
+  var today = new Date().toISOString().split('T')[0];
+  var todayLog = timeLogs.find(function(t) { return t.empId === emp.id && t.date === today; });
+  updateClockUI(todayLog, emp.id);
   startClock();
   document.getElementById('clock-screen').classList.add('open');
   document.getElementById('app').classList.add('hidden');
-  document.getElementById('fab').style.display='none';
+  document.getElementById('fab').style.display = 'none';
 }
+window.openClockScreen = openClockScreen;
 
-function updateClockUI(todayLog, empId){
-  const inBtn=document.getElementById('clk-in-btn');
-  const outBtn=document.getElementById('clk-out-btn');
-  const statusEl=document.getElementById('clk-status-val');
-  if(!todayLog){
-    statusEl.textContent='Not clocked in yet';
-    inBtn.classList.remove('disabled');outBtn.classList.add('disabled');
-  } else if(todayLog.timeIn&&!todayLog.timeOut){
-    statusEl.textContent='Clocked in at '+todayLog.timeIn;
-    inBtn.classList.add('disabled');outBtn.classList.remove('disabled');
-  } else if(todayLog.timeOut){
-    statusEl.textContent=`In: ${todayLog.timeIn} · Out: ${todayLog.timeOut}`;
-    inBtn.classList.add('disabled');outBtn.classList.add('disabled');
+function updateClockUI(todayLog, empId) {
+  var inBtn = document.getElementById('clk-in-btn');
+  var outBtn = document.getElementById('clk-out-btn');
+  var statusEl = document.getElementById('clk-status-val');
+  if (!todayLog) {
+    statusEl.textContent = 'Not clocked in yet';
+    inBtn.classList.remove('disabled'); outBtn.classList.add('disabled');
+  } else if (todayLog.timeIn && !todayLog.timeOut) {
+    statusEl.textContent = 'Clocked in at ' + todayLog.timeIn;
+    inBtn.classList.add('disabled'); outBtn.classList.remove('disabled');
+  } else if (todayLog.timeOut) {
+    statusEl.textContent = 'In: ' + todayLog.timeIn + '  Out: ' + todayLog.timeOut;
+    inBtn.classList.add('disabled'); outBtn.classList.add('disabled');
   }
 }
-
-window.doClockIn=async function(){
-  const emp=getMyEmployee()||employees.find(e=>e.id===window._qrEmpId);
-  if(!emp)return;
-  const now=new Date();
-  const date=now.toISOString().split('T')[0];
-  const timeIn=now.toTimeString().slice(0,5);
-  try{
-    await addDoc(collection(db,'timeLogs'),{empId:emp.id,date,status:'present',timeIn,timeOut:null,overtime:0,notes:null,createdAt:serverTimestamp(),createdBy:currentUser?.email||'qr'});
-    showToast('✅ Clocked in at '+timeIn);
-    const todayLog=timeLogs.find(t=>t.empId===emp.id&&t.date===date)||{timeIn,timeOut:null,date};
-    updateClockUI({...todayLog,timeIn,timeOut:null},emp.id);
-  }catch(err){showToast('Error: '+err.message);}
+window.doClockIn = async function() {
+  var emp = getMyEmployee() || employees.find(function(e) { return e.id === window._qrEmpId; });
+  if (!emp) return;
+  var now = new Date(); var date = now.toISOString().split('T')[0]; var timeIn = now.toTimeString().slice(0,5);
+  try {
+    await addDoc(collection(db,'timeLogs'), {empId:emp.id, date:date, status:'present', timeIn:timeIn, timeOut:null, overtime:0, notes:null, createdAt:serverTimestamp(), createdBy:(currentUser&&currentUser.email)||'qr'});
+    showToast('Clocked in at ' + timeIn);
+    updateClockUI({timeIn:timeIn, timeOut:null}, emp.id);
+  } catch(err) { showToast('Error: ' + err.message); }
 };
-
-window.doClockOut=async function(){
-  const emp=getMyEmployee()||employees.find(e=>e.id===window._qrEmpId);
-  if(!emp)return;
-  const now=new Date();const date=now.toISOString().split('T')[0];const timeOut=now.toTimeString().slice(0,5);
-  const todayLog=timeLogs.find(t=>t.empId===emp.id&&t.date===date&&t.timeIn&&!t.timeOut);
-  if(!todayLog){showToast('No clock-in found for today');return;}
-  try{
-    await setDoc(doc(db,'timeLogs',todayLog.id),{timeOut},{merge:true});
-    showToast('🔴 Clocked out at '+timeOut);
-    updateClockUI({...todayLog,timeOut},emp.id);
-    setTimeout(()=>skipClock(),1500);
-  }catch(err){showToast('Error: '+err.message);}
+window.doClockOut = async function() {
+  var emp = getMyEmployee() || employees.find(function(e) { return e.id === window._qrEmpId; });
+  if (!emp) return;
+  var now = new Date(); var date = now.toISOString().split('T')[0]; var timeOut = now.toTimeString().slice(0,5);
+  var todayLog = timeLogs.find(function(t) { return t.empId === emp.id && t.date === date && t.timeIn && !t.timeOut; });
+  if (!todayLog) { showToast('No clock-in found for today'); return; }
+  try {
+    await setDoc(doc(db,'timeLogs',todayLog.id), {timeOut:timeOut}, {merge:true});
+    showToast('Clocked out at ' + timeOut);
+    updateClockUI(Object.assign({}, todayLog, {timeOut:timeOut}), emp.id);
+    setTimeout(function() { window.skipClock(); }, 1500);
+  } catch(err) { showToast('Error: ' + err.message); }
 };
-
-window.skipClock=function(){
+window.skipClock = function() {
   stopClock();
   document.getElementById('clock-screen').classList.remove('open');
   document.getElementById('app').classList.remove('hidden');
-  document.getElementById('fab').style.display='flex';
+  document.getElementById('fab').style.display = 'flex';
 };
 
-function getMyEmployee(){return employees.find(e=>e.linkedEmail===currentUser?.email);}
-
-// ── EMPLOYEE DETAIL ──
-window.openEmpDetail=function(id){
-  currentEmpId=id;const emp=employees.find(e=>e.id===id);if(!emp)return;
-  document.getElementById('emp-detail-name').textContent=emp.name;
-  document.getElementById('emp-detail-role').textContent=(emp.role||'')+(emp.branch?' · '+emp.branch:'');
-  document.getElementById('emp-ts-title').textContent="Records";
-  // salary visibility: only owner sees it
-  renderEmpDetail(id);
-  generateQR('emp-qr-canvas',id,160);
+// EMPLOYEE DETAIL
+window.openEmpDetail = function(id) {
+  currentEmpId = id; var emp = employees.find(function(e) { return e.id === id; }); if (!emp) return;
+  document.getElementById('emp-detail-name').textContent = emp.name;
+  document.getElementById('emp-detail-role').textContent = (emp.role||'') + (emp.branch ? ' - ' + emp.branch : '');
+  renderEmpDetail(id); generateQR('emp-qr-canvas', id, 160);
   document.getElementById('emp-detail-screen').classList.add('open');
 };
-window.closeEmpDetail=function(){document.getElementById('emp-detail-screen').classList.remove('open');currentEmpId=null;};
-window.openEditEmployee=function(){if(currentEmpId)openAddEmployee(currentEmpId);};
+window.closeEmpDetail = function() { document.getElementById('emp-detail-screen').classList.remove('open'); currentEmpId = null; };
+window.openEditEmployee = function() { if (currentEmpId) openAddEmployee(currentEmpId); };
 
-function renderEmpDetail(empId){
-  const emp=employees.find(e=>e.id===empId);
-  const logs=timeLogs.filter(t=>t.empId===empId).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  const now=new Date();const mPfx=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  const mLogs=logs.filter(t=>(t.date||'').startsWith(mPfx));
-  const present=mLogs.filter(t=>t.status==='present'||t.status==='late'||t.status==='halfday').length;
-  const absent=mLogs.filter(t=>t.status==='absent').length;
-  const late=mLogs.filter(t=>t.status==='late').length;
-  const ot=mLogs.reduce((s,t)=>s+Number(t.overtime||0),0);
-  document.getElementById('emp-sum-grid').innerHTML=`
-    <div class="es-c"><div class="es-v" style="color:var(--g)">${present}</div><div class="es-l">Present</div></div>
-    <div class="es-c"><div class="es-v" style="color:var(--r)">${absent}</div><div class="es-l">Absent</div></div>
-    <div class="es-c"><div class="es-v" style="color:var(--am)">${late}</div><div class="es-l">Late</div></div>
-    <div class="es-c"><div class="es-v" style="color:var(--bl)">${ot.toFixed(1)}</div><div class="es-l">OT hrs</div></div>`;
-  const listEl=document.getElementById('emp-ts-list');
-  listEl.innerHTML=logs.length?logs.map(log=>tsLogHTML(log)).join(''):'<div class="empty"><div class="empty-icon">🕐</div><div class="empty-text">No records yet</div></div>';
+function renderEmpDetail(empId) {
+  var logs = timeLogs.filter(function(t) { return t.empId === empId; }).sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); });
+  var now = new Date(); var mPfx = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  var mLogs = logs.filter(function(t) { return (t.date||'').startsWith(mPfx); });
+  var present = mLogs.filter(function(t) { return t.status==='present'||t.status==='late'||t.status==='halfday'; }).length;
+  var absent  = mLogs.filter(function(t) { return t.status === 'absent'; }).length;
+  var late    = mLogs.filter(function(t) { return t.status === 'late'; }).length;
+  var ot      = mLogs.reduce(function(s,t) { return s + Number(t.overtime||0); }, 0);
+  document.getElementById('emp-sum-grid').innerHTML =
+    '<div class="es-c"><div class="es-v" style="color:var(--g)">' + present + '</div><div class="es-l">Present</div></div>' +
+    '<div class="es-c"><div class="es-v" style="color:var(--r)">' + absent + '</div><div class="es-l">Absent</div></div>' +
+    '<div class="es-c"><div class="es-v" style="color:var(--am)">' + late + '</div><div class="es-l">Late</div></div>' +
+    '<div class="es-c"><div class="es-v" style="color:var(--bl)">' + ot.toFixed(1) + '</div><div class="es-l">OT hrs</div></div>';
+  var listEl = document.getElementById('emp-ts-list');
+  listEl.innerHTML = logs.length ? logs.map(tsLogHTML).join('') :
+    '<div class="empty"><div class="empty-icon">&#128336;</div><div class="empty-text">No records yet</div></div>';
 }
 
-window.openAddEmployee=function(id){
-  editingEmpId=id||null;
-  const emp=id?employees.find(e=>e.id===id):null;
-  document.getElementById('add-emp-title').textContent=emp?'Edit employee':'Add employee';
-  document.getElementById('emp-name').value=emp?.name||'';
-  document.getElementById('emp-role-inp').value=emp?.role||'';
-  document.getElementById('emp-rate').value=emp?.dailyRate??'';
-  document.getElementById('emp-reg-hrs').value=emp?.regularHours??8;
-  document.getElementById('emp-linked-email').value=emp?.linkedEmail||'';
+window.openAddEmployee = function(id) {
+  editingEmpId = id || null;
+  var emp = id ? employees.find(function(e) { return e.id === id; }) : null;
+  document.getElementById('add-emp-title').textContent = emp ? 'Edit employee' : 'Add employee';
+  document.getElementById('emp-name').value = emp ? (emp.name||'') : '';
+  document.getElementById('emp-role-inp').value = emp ? (emp.role||'') : '';
+  document.getElementById('emp-rate').value = emp ? (emp.dailyRate||'') : '';
+  document.getElementById('emp-reg-hrs').value = emp ? (emp.regularHours||8) : 8;
+  document.getElementById('emp-linked-email').value = emp ? (emp.linkedEmail||'') : '';
   renderBranchTabs();
-  setTimeout(()=>{const sel=document.getElementById('emp-branch');if(sel&&emp?.branch)sel.value=emp.branch;},50);
+  setTimeout(function() { var sel = document.getElementById('emp-branch'); if (sel && emp && emp.branch) sel.value = emp.branch; }, 50);
   document.getElementById('modal-add-emp').classList.add('open');
 };
-
-window.saveEmployee=async function(){
-  const name=document.getElementById('emp-name').value.trim();
-  const empRole=document.getElementById('emp-role-inp').value.trim();
-  const branch=document.getElementById('emp-branch').value;
-  const linkedEmail=document.getElementById('emp-linked-email').value.trim().toLowerCase();
-  const rate=parseFloat(document.getElementById('emp-rate').value)||0;
-  const regHrs=parseFloat(document.getElementById('emp-reg-hrs').value)||8;
-  if(!name){showToast('Please enter employee name');return;}
-  const btn=document.getElementById('emp-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
-  try{
-    const data={name,role:empRole||null,branch:branch||null,linkedEmail:linkedEmail||null,dailyRate:rate,regularHours:regHrs,updatedAt:serverTimestamp()};
-    if(editingEmpId){
-      await setDoc(doc(db,'employees',editingEmpId),data,{merge:true});
-      if(isManager()) await logManagerChange('Edited employee',name);
-    }else{
-      await addDoc(collection(db,'employees'),{...data,createdAt:serverTimestamp()});
-      if(isManager()) await logManagerChange('Added employee',name);
+window.saveEmployee = async function() {
+  var name = document.getElementById('emp-name').value.trim();
+  var empRole = document.getElementById('emp-role-inp').value.trim();
+  var branch = document.getElementById('emp-branch').value;
+  var linkedEmail = document.getElementById('emp-linked-email').value.trim().toLowerCase();
+  var rate = parseFloat(document.getElementById('emp-rate').value) || 0;
+  var regHrs = parseFloat(document.getElementById('emp-reg-hrs').value) || 8;
+  if (!name) { showToast('Please enter employee name'); return; }
+  var btn = document.getElementById('emp-save-btn'); btn.disabled = true; btn.innerHTML = '<span class="sp"></span>';
+  try {
+    var data = {name:name, role:empRole||null, branch:branch||null, linkedEmail:linkedEmail||null, dailyRate:rate, regularHours:regHrs, updatedAt:serverTimestamp()};
+    if (editingEmpId) {
+      await setDoc(doc(db,'employees',editingEmpId), data, {merge:true});
+      if (isManager()) await logManagerChange('Edited employee', name);
+    } else {
+      await addDoc(collection(db,'employees'), Object.assign({}, data, {createdAt:serverTimestamp()}));
+      if (isManager()) await logManagerChange('Added employee', name);
     }
-    document.getElementById('modal-add-emp').classList.remove('open');showToast('✓ Employee saved!');
-  }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Save employee';}
+    document.getElementById('modal-add-emp').classList.remove('open'); showToast('Employee saved!');
+  } catch(err) { showToast('Error: ' + err.message); }
+  finally { btn.disabled = false; btn.textContent = 'Save employee'; }
 };
-
-window.openLogTime=function(){
-  if(!currentEmpId)return;
-  const emp=employees.find(e=>e.id===currentEmpId);
-  document.getElementById('lt-emp-name').textContent=emp?emp.name:'Employee';
-  document.getElementById('lt-date').value=new Date().toISOString().split('T')[0];
-  document.getElementById('lt-status').value='present';
-  document.getElementById('lt-in').value='07:00';document.getElementById('lt-out').value='16:00';
-  document.getElementById('lt-ot').value='';document.getElementById('lt-notes').value='';
-  onLtStatusChange();
+window.openLogTime = function() {
+  if (!currentEmpId) return;
+  var emp = employees.find(function(e) { return e.id === currentEmpId; });
+  document.getElementById('lt-emp-name').textContent = emp ? emp.name : 'Employee';
+  document.getElementById('lt-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('lt-status').value = 'present';
+  document.getElementById('lt-in').value = '07:00';
+  document.getElementById('lt-out').value = '16:00';
+  document.getElementById('lt-ot').value = '';
+  document.getElementById('lt-notes').value = '';
+  window.onLtStatusChange();
   document.getElementById('modal-log-time').classList.add('open');
 };
-window.onLtStatusChange=function(){document.getElementById('lt-time-group').style.display=document.getElementById('lt-status').value==='absent'?'none':'block';};
-window.saveTimeLog=async function(){
-  const date=document.getElementById('lt-date').value;const status=document.getElementById('lt-status').value;
-  const timeIn=document.getElementById('lt-in').value;const timeOut=document.getElementById('lt-out').value;
-  const ot=parseFloat(document.getElementById('lt-ot').value)||0;const notes=document.getElementById('lt-notes').value.trim();
-  if(!date||!currentEmpId){showToast('Missing date or employee');return;}
-  const btn=document.getElementById('lt-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
-  try{
-    const emp=employees.find(e=>e.id===currentEmpId);
-    await addDoc(collection(db,'timeLogs'),{empId:currentEmpId,date,status,timeIn:status!=='absent'?timeIn:null,timeOut:status!=='absent'?timeOut:null,overtime:ot,notes:notes||null,createdAt:serverTimestamp(),createdBy:currentUser?.email||'unknown'});
-    if(isManager()) await logManagerChange('Logged time for '+emp?.name, date+' '+status);
-    document.getElementById('modal-log-time').classList.remove('open');showToast('✓ Attendance logged!');
-    if(currentEmpId)renderEmpDetail(currentEmpId);
-  }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Save record';}
+window.onLtStatusChange = function() {
+  document.getElementById('lt-time-group').style.display = document.getElementById('lt-status').value === 'absent' ? 'none' : 'block';
 };
-window.deleteTimeLog=async function(id){if(!confirm('Delete this record?'))return;try{await deleteDoc(doc(db,'timeLogs',id));showToast('Record deleted');if(currentEmpId)renderEmpDetail(currentEmpId);}catch(err){showToast('Error: '+err.message);}};
+window.saveTimeLog = async function() {
+  var date = document.getElementById('lt-date').value; var status = document.getElementById('lt-status').value;
+  var timeIn = document.getElementById('lt-in').value; var timeOut = document.getElementById('lt-out').value;
+  var ot = parseFloat(document.getElementById('lt-ot').value) || 0;
+  var notes = document.getElementById('lt-notes').value.trim();
+  if (!date || !currentEmpId) { showToast('Missing date or employee'); return; }
+  var btn = document.getElementById('lt-save-btn'); btn.disabled = true; btn.innerHTML = '<span class="sp"></span>';
+  try {
+    var emp = employees.find(function(e) { return e.id === currentEmpId; });
+    await addDoc(collection(db,'timeLogs'), {empId:currentEmpId, date:date, status:status, timeIn:status!=='absent'?timeIn:null, timeOut:status!=='absent'?timeOut:null, overtime:ot, notes:notes||null, createdAt:serverTimestamp(), createdBy:(currentUser&&currentUser.email)||'unknown'});
+    if (isManager()) await logManagerChange('Logged time for ' + (emp&&emp.name||''), date + ' ' + status);
+    document.getElementById('modal-log-time').classList.remove('open'); showToast('Attendance logged!');
+    if (currentEmpId) renderEmpDetail(currentEmpId);
+  } catch(err) { showToast('Error: ' + err.message); }
+  finally { btn.disabled = false; btn.textContent = 'Save record'; }
+};
+window.deleteTimeLog = async function(id) {
+  if (!confirm('Delete this record?')) return;
+  try { await deleteDoc(doc(db,'timeLogs',id)); showToast('Record deleted'); if (currentEmpId) renderEmpDetail(currentEmpId); }
+  catch(err) { showToast('Error: ' + err.message); }
+};
 
-// ── INVENTORY ACTIONS ──
-window.openAddItem=function(id){
-  editingItemId=id||null;const item=id?invItems.find(i=>i.id===id):null;
-  document.getElementById('add-item-title').textContent=item?'Edit item':'Add inventory item';
-  document.getElementById('item-name').value=item?.name||'';document.getElementById('item-cat').value=item?.category||'catfish';
-  document.getElementById('item-qty').value=item?.qty??'';document.getElementById('item-unit').value=item?.unit||'kg';
-  document.getElementById('item-kg').value=item?.kg??'';document.getElementById('item-low').value=item?.lowAlert??'';
-  document.getElementById('item-notes').value=item?.notes||'';onItemCatChange();
+// INVENTORY ACTIONS
+window.openAddItem = function(id) {
+  editingItemId = id || null;
+  var item = id ? invItems.find(function(i) { return i.id === id; }) : null;
+  document.getElementById('add-item-title').textContent = item ? 'Edit item' : 'Add inventory item';
+  document.getElementById('item-name').value = item ? (item.name||'') : '';
+  document.getElementById('item-cat').value = item ? (item.category||'catfish') : 'catfish';
+  document.getElementById('item-qty').value = item ? (item.qty||'') : '';
+  document.getElementById('item-unit').value = item ? (item.unit||'kg') : 'kg';
+  document.getElementById('item-kg').value = item ? (item.kg||'') : '';
+  document.getElementById('item-low').value = item ? (item.lowAlert||'') : '';
+  document.getElementById('item-notes').value = item ? (item.notes||'') : '';
+  window.onItemCatChange();
   document.getElementById('modal-add-item').classList.add('open');
 };
-window.onItemCatChange=function(){document.getElementById('item-weight-group').style.display=document.getElementById('item-cat').value==='catfish'?'block':'none';};
-window.saveItem=async function(){
-  const name=document.getElementById('item-name').value.trim();const cat=document.getElementById('item-cat').value;
-  const qty=parseFloat(document.getElementById('item-qty').value)||0;const unit=document.getElementById('item-unit').value.trim()||'pcs';
-  const kg=parseFloat(document.getElementById('item-kg').value)||0;const low=parseFloat(document.getElementById('item-low').value)||0;
-  const notes=document.getElementById('item-notes').value.trim();
-  if(!name){showToast('Please enter item name');return;}
-  const btn=document.getElementById('item-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
-  try{
-    const data={name,category:cat,qty,unit,kg:cat==='catfish'?kg:0,lowAlert:low,notes:notes||null,updatedAt:serverTimestamp()};
-    if(editingItemId){
-      await setDoc(doc(db,'invItems',editingItemId),data,{merge:true});
-      if(isManager()) await logManagerChange('Edited inventory item',name);
-    }else{
-      await addDoc(collection(db,'invItems'),{...data,createdAt:serverTimestamp()});
-      if(isManager()) await logManagerChange('Added inventory item',name);
-    }
-    document.getElementById('modal-add-item').classList.remove('open');showToast('✓ Item saved!');
-  }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Save item';}
+window.onItemCatChange = function() {
+  document.getElementById('item-weight-group').style.display = document.getElementById('item-cat').value === 'catfish' ? 'block' : 'none';
 };
-window.openMovement=function(itemId,dir){
-  currentMvItemId=itemId;const item=invItems.find(i=>i.id===itemId);
-  document.getElementById('mv-title').textContent=dir==='in'?'📥 Stock IN':'📤 Stock OUT';
-  document.getElementById('mv-item-name').textContent=item?item.name:'';
-  document.getElementById('mv-type').value=dir;
-  document.getElementById('mv-qty').value='';document.getElementById('mv-kg').value='';document.getElementById('mv-reason').value='';
-  document.getElementById('mv-date').value=new Date().toISOString().split('T')[0];
-  document.getElementById('mv-kg-group').style.display=item?.category==='catfish'?'block':'none';
+window.saveItem = async function() {
+  var name = document.getElementById('item-name').value.trim();
+  var cat = document.getElementById('item-cat').value;
+  var qty = parseFloat(document.getElementById('item-qty').value) || 0;
+  var unit = document.getElementById('item-unit').value.trim() || 'pcs';
+  var kg = parseFloat(document.getElementById('item-kg').value) || 0;
+  var low = parseFloat(document.getElementById('item-low').value) || 0;
+  var notes = document.getElementById('item-notes').value.trim();
+  if (!name) { showToast('Please enter item name'); return; }
+  var btn = document.getElementById('item-save-btn'); btn.disabled = true; btn.innerHTML = '<span class="sp"></span>';
+  try {
+    var data = {name:name, category:cat, qty:qty, unit:unit, kg:cat==='catfish'?kg:0, lowAlert:low, notes:notes||null, updatedAt:serverTimestamp()};
+    if (editingItemId) {
+      await setDoc(doc(db,'invItems',editingItemId), data, {merge:true});
+      if (isManager()) await logManagerChange('Edited inventory item', name);
+    } else {
+      await addDoc(collection(db,'invItems'), Object.assign({}, data, {createdAt:serverTimestamp()}));
+      if (isManager()) await logManagerChange('Added inventory item', name);
+    }
+    document.getElementById('modal-add-item').classList.remove('open'); showToast('Item saved!');
+  } catch(err) { showToast('Error: ' + err.message); }
+  finally { btn.disabled = false; btn.textContent = 'Save item'; }
+};
+window.openMovement = function(itemId, dir) {
+  currentMvItemId = itemId;
+  var item = invItems.find(function(i) { return i.id === itemId; });
+  document.getElementById('mv-title').textContent = dir === 'in' ? 'Stock IN' : 'Stock OUT';
+  document.getElementById('mv-item-name').textContent = item ? item.name : '';
+  document.getElementById('mv-type').value = dir;
+  document.getElementById('mv-qty').value = ''; document.getElementById('mv-kg').value = ''; document.getElementById('mv-reason').value = '';
+  document.getElementById('mv-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('mv-kg-group').style.display = (item && item.category === 'catfish') ? 'block' : 'none';
   document.getElementById('modal-movement').classList.add('open');
 };
-window.saveMovement=async function(){
-  const qty=parseFloat(document.getElementById('mv-qty').value)||0;const type=document.getElementById('mv-type').value;
-  const date=document.getElementById('mv-date').value;const reason=document.getElementById('mv-reason').value.trim();
-  const kg=parseFloat(document.getElementById('mv-kg').value)||0;
-  if(!qty){showToast('Please enter quantity');return;}if(!date){showToast('Please choose a date');return;}
-  const btn=document.getElementById('mv-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
-  try{
-    const item=invItems.find(i=>i.id===currentMvItemId);
-    await addDoc(collection(db,'movements'),{itemId:currentMvItemId,itemName:item?.name||'',type,qty,kg:item?.category==='catfish'?kg:0,date,reason:reason||null,createdAt:serverTimestamp(),createdBy:currentUser?.email?.split('@')[0]||'unknown'});
-    if(item){let nq=Number(item.qty)||0,nk=Number(item.kg)||0;if(type==='in'){nq+=qty;nk+=kg;}else if(type==='out'){nq=Math.max(0,nq-qty);nk=Math.max(0,nk-kg);}else if(type==='adjustment'){nq=qty;nk=kg;}await setDoc(doc(db,'invItems',item.id),{qty:nq,kg:nk,updatedAt:serverTimestamp()},{merge:true});}
-    if(isManager()) await logManagerChange('Stock '+type+' — '+item?.name, qty+' '+item?.unit);
-    document.getElementById('modal-movement').classList.remove('open');showToast('✓ Movement saved!');
-  }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Save movement';}
+window.saveMovement = async function() {
+  var qty = parseFloat(document.getElementById('mv-qty').value) || 0;
+  var type = document.getElementById('mv-type').value;
+  var date = document.getElementById('mv-date').value;
+  var reason = document.getElementById('mv-reason').value.trim();
+  var kg = parseFloat(document.getElementById('mv-kg').value) || 0;
+  if (!qty) { showToast('Please enter quantity'); return; }
+  if (!date) { showToast('Please choose a date'); return; }
+  var btn = document.getElementById('mv-save-btn'); btn.disabled = true; btn.innerHTML = '<span class="sp"></span>';
+  try {
+    var item = invItems.find(function(i) { return i.id === currentMvItemId; });
+    await addDoc(collection(db,'movements'), {itemId:currentMvItemId, itemName:item?item.name:'', type:type, qty:qty, kg:(item&&item.category==='catfish')?kg:0, date:date, reason:reason||null, createdAt:serverTimestamp(), createdBy:(currentUser&&currentUser.email.split('@')[0])||'unknown'});
+    if (item) {
+      var nq = Number(item.qty)||0, nk = Number(item.kg)||0;
+      if (type==='in') { nq+=qty; nk+=kg; } else if (type==='out') { nq=Math.max(0,nq-qty); nk=Math.max(0,nk-kg); } else if (type==='adjustment') { nq=qty; nk=kg; }
+      await setDoc(doc(db,'invItems',item.id), {qty:nq, kg:nk, updatedAt:serverTimestamp()}, {merge:true});
+    }
+    if (isManager()) await logManagerChange('Stock ' + type + ' - ' + (item?item.name:''), qty + ' ' + (item?item.unit||'':''));
+    document.getElementById('modal-movement').classList.remove('open'); showToast('Movement saved!');
+  } catch(err) { showToast('Error: ' + err.message); }
+  finally { btn.disabled = false; btn.textContent = 'Save movement'; }
 };
-window.deleteItem=async function(id){if(!confirm('Delete this item?'))return;try{await deleteDoc(doc(db,'invItems',id));showToast('Item deleted');}catch(err){showToast('Error: '+err.message);}};
+window.deleteItem = async function(id) {
+  if (!confirm('Delete this item?')) return;
+  try { await deleteDoc(doc(db,'invItems',id)); showToast('Item deleted'); } catch(err) { showToast('Error: ' + err.message); }
+};
 
-// ── SALES ACTIONS ──
-window.openNewSale=function(){
-  saleItemCount=0;document.getElementById('sale-items-list').innerHTML='';
-  document.getElementById('sale-cust').value='';document.getElementById('sale-notes').value='';
-  document.getElementById('sale-date').value=new Date().toISOString().split('T')[0];
-  renderBranchTabs();addSaleItem();
+// SALES ACTIONS
+window.openNewSale = function() {
+  saleItemCount = 0; document.getElementById('sale-items-list').innerHTML = '';
+  document.getElementById('sale-cust').value = ''; document.getElementById('sale-notes').value = '';
+  document.getElementById('sale-date').value = new Date().toISOString().split('T')[0];
+  renderBranchTabs(); addSaleItem();
   document.getElementById('modal-sale').classList.add('open');
 };
-window.addSaleItem=function(){
-  saleItemCount++;const id='si-'+saleItemCount;const div=document.createElement('div');div.className='li-row';div.id=id;
-  div.innerHTML=`<input placeholder="Item" style="flex:2" class="si-name"/><input placeholder="Qty" type="number" min="0" step="0.1" style="flex:1" class="si-qty" oninput="calcSI('${id}')"/><input placeholder="Unit" style="flex:0.8" class="si-unit" value="kg"/><input placeholder="₱/u" type="number" min="0" step="0.01" style="flex:1.2" class="si-price" oninput="calcSI('${id}')"/><input placeholder="Total" type="number" style="flex:1.2" class="si-total" readonly/><button class="li-rm" onclick="document.getElementById('${id}').remove()">✕</button>`;
+window.addSaleItem = function() {
+  saleItemCount++;
+  var id = 'si-' + saleItemCount; var div = document.createElement('div'); div.className = 'li-row'; div.id = id;
+  div.innerHTML = '<input placeholder="Item" style="flex:2" class="si-name"/>' +
+    '<input placeholder="Qty" type="number" min="0" step="0.1" style="flex:1" class="si-qty" oninput="calcSI(\'' + id + '\')" />' +
+    '<input placeholder="Unit" style="flex:0.8" class="si-unit" value="kg"/>' +
+    '<input placeholder="Price" type="number" min="0" step="0.01" style="flex:1.2" class="si-price" oninput="calcSI(\'' + id + '\')" />' +
+    '<input placeholder="Total" type="number" style="flex:1.2" class="si-total" readonly/>' +
+    '<button class="li-rm" onclick="document.getElementById(\'' + id + '\').remove()">x</button>';
   document.getElementById('sale-items-list').appendChild(div);
 };
-window.calcSI=function(id){const row=document.getElementById(id);if(!row)return;const q=parseFloat(row.querySelector('.si-qty').value)||0,p=parseFloat(row.querySelector('.si-price').value)||0;row.querySelector('.si-total').value=(q*p).toFixed(2);};
-window.saveSale=async function(){
-  const branch=document.getElementById('sale-branch').value;const cust=document.getElementById('sale-cust').value.trim();
-  const date=document.getElementById('sale-date').value;const notes=document.getElementById('sale-notes').value.trim();
-  if(!date){showToast('Please choose a date');return;}
-  const rows=document.querySelectorAll('#sale-items-list .li-row');const items=[];
-  rows.forEach(row=>{const name=row.querySelector('.si-name').value.trim();const qty=parseFloat(row.querySelector('.si-qty').value)||0;const unit=row.querySelector('.si-unit').value.trim()||'kg';const price=parseFloat(row.querySelector('.si-price').value)||0;if(name&&qty&&price)items.push({name,qty,unit,price,total:qty*price});});
-  if(!items.length){showToast('Add at least one item');return;}
-  const total=items.reduce((s,i)=>s+i.total,0);
-  const btn=document.getElementById('sale-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
-  try{
-    await addDoc(collection(db,'sales'),{branch,customerName:cust||null,date,items,total,notes:notes||null,createdAt:serverTimestamp(),submittedBy:currentUser?.email?.split('@')[0]||'unknown',createdBy:currentUser?.email||''});
-    if(isManager()) await logManagerChange('Added sale record',branch+' '+fmt(total));
-    document.getElementById('modal-sale').classList.remove('open');showToast('✓ Sale saved!');
-  }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Save sale';}
+window.calcSI = function(id) {
+  var row = document.getElementById(id); if (!row) return;
+  var q = parseFloat(row.querySelector('.si-qty').value) || 0, p = parseFloat(row.querySelector('.si-price').value) || 0;
+  row.querySelector('.si-total').value = (q*p).toFixed(2);
 };
-window.deleteSale=async function(id){if(!confirm('Delete this sale?'))return;try{await deleteDoc(doc(db,'sales',id));showToast('Sale deleted');}catch(err){showToast('Error: '+err.message);}};
+window.saveSale = async function() {
+  var branch = document.getElementById('sale-branch').value; var cust = document.getElementById('sale-cust').value.trim();
+  var date = document.getElementById('sale-date').value; var notes = document.getElementById('sale-notes').value.trim();
+  if (!date) { showToast('Please choose a date'); return; }
+  var rows = document.querySelectorAll('#sale-items-list .li-row'); var items = [];
+  rows.forEach(function(row) {
+    var name = row.querySelector('.si-name').value.trim(); var qty = parseFloat(row.querySelector('.si-qty').value)||0;
+    var unit = row.querySelector('.si-unit').value.trim()||'kg'; var price = parseFloat(row.querySelector('.si-price').value)||0;
+    if (name && qty && price) items.push({name:name, qty:qty, unit:unit, price:price, total:qty*price});
+  });
+  if (!items.length) { showToast('Add at least one item'); return; }
+  var total = items.reduce(function(s,i) { return s + i.total; }, 0);
+  var btn = document.getElementById('sale-save-btn'); btn.disabled = true; btn.innerHTML = '<span class="sp"></span>';
+  try {
+    await addDoc(collection(db,'sales'), {branch:branch, customerName:cust||null, date:date, items:items, total:total, notes:notes||null, createdAt:serverTimestamp(), submittedBy:(currentUser&&currentUser.email.split('@')[0])||'unknown', createdBy:(currentUser&&currentUser.email)||''});
+    if (isManager()) await logManagerChange('Added sale record', branch + ' ' + fmt(total));
+    document.getElementById('modal-sale').classList.remove('open'); showToast('Sale saved!');
+  } catch(err) { showToast('Error: ' + err.message); }
+  finally { btn.disabled = false; btn.textContent = 'Save sale'; }
+};
+window.deleteSale = async function(id) {
+  if (!confirm('Delete this sale?')) return;
+  try { await deleteDoc(doc(db,'sales',id)); showToast('Sale deleted'); } catch(err) { showToast('Error: ' + err.message); }
+};
 
-// ── INVOICE ACTIONS ──
-let invLineCount=0;
-window.openNewInvoice=function(){
-  invLineCount=0;document.getElementById('line-items-list').innerHTML='';
-  document.getElementById('inv-cust').value='';document.getElementById('inv-addr').value='';
-  document.getElementById('inv-notes').value='';document.getElementById('inv-date').value=new Date().toISOString().split('T')[0];
-  addLineItem();document.getElementById('modal-invoice').classList.add('open');
+// INVOICE ACTIONS
+window.openNewInvoice = function() {
+  invLineCount = 0; document.getElementById('line-items-list').innerHTML = '';
+  document.getElementById('inv-cust').value = ''; document.getElementById('inv-addr').value = '';
+  document.getElementById('inv-notes').value = ''; document.getElementById('inv-date').value = new Date().toISOString().split('T')[0];
+  addLineItem(); document.getElementById('modal-invoice').classList.add('open');
 };
-window.addLineItem=function(){
-  invLineCount++;const id='li-'+invLineCount;const div=document.createElement('div');div.className='li-row';div.id=id;
-  div.innerHTML=`<input placeholder="Item" style="flex:2" class="li-name"/><input placeholder="Qty" type="number" min="0" step="0.1" style="flex:1" class="li-qty" oninput="calcLT('${id}')"/><input placeholder="Unit" style="flex:0.8" class="li-unit" value="kg"/><input placeholder="₱/u" type="number" min="0" step="0.01" style="flex:1.2" class="li-price" oninput="calcLT('${id}')"/><input placeholder="Total" type="number" style="flex:1.2" class="li-total" readonly/><button class="li-rm" onclick="document.getElementById('${id}').remove()">✕</button>`;
+window.addLineItem = function() {
+  invLineCount++;
+  var id = 'li-' + invLineCount; var div = document.createElement('div'); div.className = 'li-row'; div.id = id;
+  div.innerHTML = '<input placeholder="Item" style="flex:2" class="li-name"/>' +
+    '<input placeholder="Qty" type="number" min="0" step="0.1" style="flex:1" class="li-qty" oninput="calcLT(\'' + id + '\')" />' +
+    '<input placeholder="Unit" style="flex:0.8" class="li-unit" value="kg"/>' +
+    '<input placeholder="Price" type="number" min="0" step="0.01" style="flex:1.2" class="li-price" oninput="calcLT(\'' + id + '\')" />' +
+    '<input placeholder="Total" type="number" style="flex:1.2" class="li-total" readonly/>' +
+    '<button class="li-rm" onclick="document.getElementById(\'' + id + '\').remove()">x</button>';
   document.getElementById('line-items-list').appendChild(div);
 };
-window.calcLT=function(id){const row=document.getElementById(id);if(!row)return;const q=parseFloat(row.querySelector('.li-qty').value)||0,p=parseFloat(row.querySelector('.li-price').value)||0;row.querySelector('.li-total').value=(q*p).toFixed(2);};
-window.saveInvoice=async function(){
-  const cust=document.getElementById('inv-cust').value.trim();const addr=document.getElementById('inv-addr').value.trim();
-  const date=document.getElementById('inv-date').value;const notes=document.getElementById('inv-notes').value.trim();
-  if(!cust||!date){showToast('Please fill in customer and date');return;}
-  const rows=document.querySelectorAll('#line-items-list .li-row');const lineItems=[];
-  rows.forEach(row=>{const name=row.querySelector('.li-name').value.trim();const qty=parseFloat(row.querySelector('.li-qty').value)||0;const unit=row.querySelector('.li-unit').value.trim()||'kg';const price=parseFloat(row.querySelector('.li-price').value)||0;if(name&&qty&&price)lineItems.push({name,qty,unit,price,total:qty*price});});
-  if(!lineItems.length){showToast('Add at least one item');return;}
-  const total=lineItems.reduce((s,i)=>s+i.total,0);const invoiceNo=invoices.length+1;
-  const btn=document.getElementById('inv-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
-  try{
-    const ref=await addDoc(collection(db,'invoices'),{customerName:cust,customerAddress:addr||null,date,lineItems,total,notes:notes||null,invoiceNo,status:'pending',createdAt:serverTimestamp(),createdBy:currentUser?.email||'unknown'});
-    if(isManager()) await logManagerChange('Created invoice for '+cust,fmt(total));
-    document.getElementById('modal-invoice').classList.remove('open');showToast('✓ Invoice created!');
-    setTimeout(()=>viewInvoice(ref.id),400);
-  }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Generate Invoice';}
+window.calcLT = function(id) {
+  var row = document.getElementById(id); if (!row) return;
+  var q = parseFloat(row.querySelector('.li-qty').value)||0, p = parseFloat(row.querySelector('.li-price').value)||0;
+  row.querySelector('.li-total').value = (q*p).toFixed(2);
 };
-window.viewInvoice=function(id){
-  const inv=invoices.find(i=>i.id===id);if(!inv)return;
-  currentInvoiceId=id;
-  document.getElementById('ip-no').textContent='INVOICE #'+String(inv.invoiceNo||'').padStart(3,'0');
-  document.getElementById('ip-date').textContent='Date: '+fmtDate(inv.date);
-  document.getElementById('ip-cust-name').textContent=inv.customerName||'';
-  document.getElementById('ip-cust-addr').textContent=inv.customerAddress||'';
-  const tbody=document.getElementById('ip-line-items');let sub=0;
-  tbody.innerHTML=(inv.lineItems||[]).map(li=>{sub+=Number(li.total)||0;return`<tr><td>${escHtml(li.name)}</td><td>${Number(li.qty).toFixed(2)}</td><td>${escHtml(li.unit||'')}</td><td>${fmt(li.price)}</td><td>${fmt(li.total)}</td></tr>`;}).join('');
-  document.getElementById('ip-subtotal').textContent=fmt(sub);document.getElementById('ip-total').textContent=fmt(inv.total);
-  const nb=document.getElementById('ip-notes-box');if(inv.notes){nb.style.display='block';document.getElementById('ip-notes').textContent=inv.notes;}else{nb.style.display='none';}
-  const isPaid=inv.status==='paid';
-  document.getElementById('st-paid').className='st-btn'+(isPaid?' ap':'');
-  document.getElementById('st-pending').className='st-btn'+(!isPaid?' apd':'');
+window.saveInvoice = async function() {
+  var cust = document.getElementById('inv-cust').value.trim(); var addr = document.getElementById('inv-addr').value.trim();
+  var date = document.getElementById('inv-date').value; var notes = document.getElementById('inv-notes').value.trim();
+  if (!cust || !date) { showToast('Please fill in customer and date'); return; }
+  var rows = document.querySelectorAll('#line-items-list .li-row'); var lineItems = [];
+  rows.forEach(function(row) {
+    var name = row.querySelector('.li-name').value.trim(); var qty = parseFloat(row.querySelector('.li-qty').value)||0;
+    var unit = row.querySelector('.li-unit').value.trim()||'kg'; var price = parseFloat(row.querySelector('.li-price').value)||0;
+    if (name && qty && price) lineItems.push({name:name, qty:qty, unit:unit, price:price, total:qty*price});
+  });
+  if (!lineItems.length) { showToast('Add at least one item'); return; }
+  var total = lineItems.reduce(function(s,i) { return s + i.total; }, 0); var invoiceNo = invoices.length + 1;
+  var btn = document.getElementById('inv-save-btn'); btn.disabled = true; btn.innerHTML = '<span class="sp"></span>';
+  try {
+    var ref = await addDoc(collection(db,'invoices'), {customerName:cust, customerAddress:addr||null, date:date, lineItems:lineItems, total:total, notes:notes||null, invoiceNo:invoiceNo, status:'pending', createdAt:serverTimestamp(), createdBy:(currentUser&&currentUser.email)||'unknown'});
+    if (isManager()) await logManagerChange('Created invoice for ' + cust, fmt(total));
+    document.getElementById('modal-invoice').classList.remove('open'); showToast('Invoice created!');
+    setTimeout(function() { viewInvoice(ref.id); }, 400);
+  } catch(err) { showToast('Error: ' + err.message); }
+  finally { btn.disabled = false; btn.textContent = 'Generate Invoice'; }
+};
+window.viewInvoice = function(id) {
+  var inv = invoices.find(function(i) { return i.id === id; }); if (!inv) return;
+  currentInvoiceId = id;
+  document.getElementById('ip-no').textContent = 'INVOICE #' + String(inv.invoiceNo||'').padStart(3,'0');
+  document.getElementById('ip-date').textContent = 'Date: ' + fmtDate(inv.date);
+  document.getElementById('ip-cust-name').textContent = inv.customerName || '';
+  document.getElementById('ip-cust-addr').textContent = inv.customerAddress || '';
+  var tbody = document.getElementById('ip-line-items'); var sub = 0;
+  tbody.innerHTML = (inv.lineItems||[]).map(function(li) { sub += Number(li.total)||0; return '<tr><td>' + escHtml(li.name) + '</td><td>' + Number(li.qty).toFixed(2) + '</td><td>' + escHtml(li.unit||'') + '</td><td>' + fmt(li.price) + '</td><td>' + fmt(li.total) + '</td></tr>'; }).join('');
+  document.getElementById('ip-subtotal').textContent = fmt(sub); document.getElementById('ip-total').textContent = fmt(inv.total);
+  var nb = document.getElementById('ip-notes-box');
+  if (inv.notes) { nb.style.display = 'block'; document.getElementById('ip-notes').textContent = inv.notes; } else { nb.style.display = 'none'; }
+  var isPaid = inv.status === 'paid';
+  document.getElementById('st-paid').className = 'st-btn' + (isPaid ? ' ap' : '');
+  document.getElementById('st-pending').className = 'st-btn' + (!isPaid ? ' apd' : '');
   document.getElementById('invoice-print').classList.add('open');
 };
-window.setInvoiceStatus=async function(status){
-  if(!currentInvoiceId)return;
-  try{await setDoc(doc(db,'invoices',currentInvoiceId),{status},{merge:true});showToast(status==='paid'?'✅ Marked as paid':'⏳ Marked as pending');document.getElementById('st-paid').className='st-btn'+(status==='paid'?' ap':'');document.getElementById('st-pending').className='st-btn'+(status==='pending'?' apd':'');}catch(err){showToast('Error: '+err.message);}
+window.setInvoiceStatus = async function(status) {
+  if (!currentInvoiceId) return;
+  try {
+    await setDoc(doc(db,'invoices',currentInvoiceId), {status:status}, {merge:true});
+    showToast(status === 'paid' ? 'Marked as paid' : 'Marked as pending');
+    document.getElementById('st-paid').className = 'st-btn' + (status==='paid' ? ' ap' : '');
+    document.getElementById('st-pending').className = 'st-btn' + (status==='pending' ? ' apd' : '');
+  } catch(err) { showToast('Error: ' + err.message); }
 };
-window.closeInvoicePrint=function(){document.getElementById('invoice-print').classList.remove('open');};
-window.shareInvoice=function(){if(navigator.share){navigator.share({title:'CatFish Invoice',url:window.location.href}).catch(()=>{});}else{showToast('Use Print → Save as PDF to share');}};
-
-// ── ENTRY ACTIONS ──
-window.viewReceipt=function(id){const e=entries.find(x=>x.id===id);if(!e)return;document.getElementById('rv-title').textContent=e.description||'Receipt';const img=document.getElementById('receipt-viewer-img');img.style.display=e.receipt&&e.receipt.startsWith('data:image')?'block':'none';if(img.style.display==='block')img.src=e.receipt;const info=getInfo(e);document.getElementById('rv-info').innerHTML=`<b>Amount:</b> ${fmt(e.amount)}<br><b>Date:</b> ${fmtDate(e.date)}<br><b>Type:</b> ${info.label}${e.notes?'<br><b>Notes:</b> '+escHtml(e.notes):''}`;document.getElementById('modal-receipt').classList.add('open');};
-window.deleteEntry=async function(id){if(!confirm('Delete this entry?'))return;try{await deleteDoc(doc(db,'entries',id));showToast('Entry deleted');}catch(err){showToast('Error: '+err.message);}};
-window.onTypeChange=function(){document.getElementById('cat-fg').style.display=document.getElementById('e-type').value==='expense'?'block':'none';};
-window.closeEntry=function(){document.getElementById('modal-entry').classList.remove('open');};
-window.onFilePick=function(ev){
-  const file=ev.target.files[0];if(!file)return;
-  const fnEl=document.getElementById('e-fname'),previewImg=document.getElementById('e-preview');
-  if(!file.type.startsWith('image/')){fnEl.textContent='Non-image file cannot be attached';return;}
-  fnEl.textContent='⏳ Compressing...';previewImg.style.display='none';
-  const reader=new FileReader();
-  reader.onload=function(ev2){
-    const original=new Image();
-    original.onload=function(){
-      const MAX=1024;let w=original.width,h=original.height;
-      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
-      const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
-      canvas.getContext('2d').drawImage(original,0,0,w,h);
-      let quality=0.7,compressed=canvas.toDataURL('image/jpeg',quality);
-      while(compressed.length>700000&&quality>0.2){quality-=0.1;compressed=canvas.toDataURL('image/jpeg',quality);}
-      pendingFile=compressed;previewImg.src=compressed;previewImg.style.display='block';
-      fnEl.textContent=`✓ Photo ready (${Math.round(compressed.length*0.75/1024)} KB)`;
-    };original.src=ev2.target.result;
-  };reader.readAsDataURL(file);
-};
-window.saveEntry=async function(){
-  const type=document.getElementById('e-type').value;const desc=document.getElementById('e-desc').value.trim();
-  const amount=parseFloat(document.getElementById('e-amount').value);const date=document.getElementById('e-date').value;
-  const cat=document.getElementById('e-cat').value;const notes=document.getElementById('e-notes').value.trim();
-  if(!desc){showToast('Please enter a description');return;}if(!amount||amount<=0){showToast('Please enter a valid amount');return;}if(!date){showToast('Please choose a date');return;}
-  const btn=document.getElementById('save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
-  try{
-    await addDoc(collection(db,'entries'),{type,description:desc,amount,date,category:type==='expense'?cat:null,notes:notes||null,receipt:pendingFile||null,createdAt:serverTimestamp(),createdBy:currentUser?.email||'unknown'});
-    if(isManager()) await logManagerChange('Added '+type+' entry',desc+' '+fmt(amount));
-    pendingFile=null;window.closeEntry();showToast('✓ Entry saved and synced!');
-  }catch(err){showToast('Error: '+err.message);}
-  finally{btn.disabled=false;btn.textContent='Save entry';}
+window.closeInvoicePrint = function() { document.getElementById('invoice-print').classList.remove('open'); };
+window.shareInvoice = function() {
+  if (navigator.share) { navigator.share({title:'CatFish Invoice', url:window.location.href}).catch(function(){}); }
+  else { showToast('Use Print to Save as PDF'); }
 };
 
+// ENTRY ACTIONS
+window.viewReceipt = function(id) {
+  var e = entries.find(function(x) { return x.id === id; }); if (!e) return;
+  document.getElementById('rv-title').textContent = e.description || 'Receipt';
+  var img = document.getElementById('receipt-viewer-img');
+  img.style.display = (e.receipt && e.receipt.startsWith('data:image')) ? 'block' : 'none';
+  if (img.style.display === 'block') img.src = e.receipt;
+  var info = getInfo(e);
+  document.getElementById('rv-info').innerHTML = '<b>Amount:</b> ' + fmt(e.amount) + '<br><b>Date:</b> ' + fmtDate(e.date) + '<br><b>Type:</b> ' + info.label + (e.notes ? '<br><b>Notes:</b> ' + escHtml(e.notes) : '');
+  document.getElementById('modal-receipt').classList.add('open');
+};
+window.deleteEntry = async function(id) {
+  if (!confirm('Delete this entry?')) return;
+  try { await deleteDoc(doc(db,'entries',id)); showToast('Entry deleted'); } catch(err) { showToast('Error: ' + err.message); }
+};
+window.onTypeChange = function() {
+  document.getElementById('cat-fg').style.display = document.getElementById('e-type').value === 'expense' ? 'block' : 'none';
+};
+window.closeEntry = function() { document.getElementById('modal-entry').classList.remove('open'); };
+window.onFilePick = function(ev) {
+  var file = ev.target.files[0]; if (!file) return;
+  var fnEl = document.getElementById('e-fname'), previewImg = document.getElementById('e-preview');
+  if (!file.type.startsWith('image/')) { fnEl.textContent = 'Non-image files cannot be attached'; return; }
+  fnEl.textContent = 'Compressing...'; previewImg.style.display = 'none';
+  var reader = new FileReader();
+  reader.onload = function(ev2) {
+    var original = new Image();
+    original.onload = function() {
+      var MAX = 1024, w = original.width, h = original.height;
+      if (w > MAX || h > MAX) { if (w > h) { h = Math.round(h*MAX/w); w = MAX; } else { w = Math.round(w*MAX/h); h = MAX; } }
+      var canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(original, 0, 0, w, h);
+      var quality = 0.7, compressed = canvas.toDataURL('image/jpeg', quality);
+      while (compressed.length > 700000 && quality > 0.2) { quality -= 0.1; compressed = canvas.toDataURL('image/jpeg', quality); }
+      pendingFile = compressed; previewImg.src = compressed; previewImg.style.display = 'block';
+      fnEl.textContent = 'Photo ready (' + Math.round(compressed.length*0.75/1024) + ' KB)';
+    };
+    original.src = ev2.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+window.saveEntry = async function() {
+  var type = document.getElementById('e-type').value; var desc = document.getElementById('e-desc').value.trim();
+  var amount = parseFloat(document.getElementById('e-amount').value); var date = document.getElementById('e-date').value;
+  var cat = document.getElementById('e-cat').value; var notes = document.getElementById('e-notes').value.trim();
+  if (!desc) { showToast('Please enter a description'); return; }
+  if (!amount || amount <= 0) { showToast('Please enter a valid amount'); return; }
+  if (!date) { showToast('Please choose a date'); return; }
+  var btn = document.getElementById('save-btn'); btn.disabled = true; btn.innerHTML = '<span class="sp"></span>';
+  try {
+    await addDoc(collection(db,'entries'), {type:type, description:desc, amount:amount, date:date, category:type==='expense'?cat:null, notes:notes||null, receipt:pendingFile||null, createdAt:serverTimestamp(), createdBy:(currentUser&&currentUser.email)||'unknown'});
+    if (isManager()) await logManagerChange('Added ' + type + ' entry', desc + ' ' + fmt(amount));
+    pendingFile = null; window.closeEntry(); showToast('Entry saved and synced!');
+  } catch(err) { showToast('Error: ' + err.message); }
+  finally { btn.disabled = false; btn.textContent = 'Save entry'; }
+};
 
-// ══════════════════════════════════════════════════════════════
 // EXPORT MODULE
-// ══════════════════════════════════════════════════════════════
-let expPeriod = 'today';
-let expFromDate = '', expToDate = '';
-let expTypes = new Set(['expenses','sales','capital','inventory','timesheet','invoices']);
-
-function getExportDateRange(period){
-  const now = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  const fmt = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-  const today = fmt(now);
-  switch(period){
-    case 'today':   return {from:today, to:today};
-    case 'week':{
-      const d = new Date(now); d.setDate(d.getDate()-d.getDay());
-      return {from:fmt(d), to:today};
-    }
-    case 'month':   return {from:now.getFullYear()+'-'+pad(now.getMonth()+1)+'-01', to:today};
-    case 'year':    return {from:now.getFullYear()+'-01-01', to:today};
-    case 'last7':{  const d=new Date(now);d.setDate(d.getDate()-6);return{from:fmt(d),to:today};}
-    case 'last30':{ const d=new Date(now);d.setDate(d.getDate()-29);return{from:fmt(d),to:today};}
-    case 'last90':{ const d=new Date(now);d.setDate(d.getDate()-89);return{from:fmt(d),to:today};}
-    case 'custom':  return {from:expFromDate||today, to:expToDate||today};
-    default:        return {from:today, to:today};
+var expPeriod = 'today', expFromDate = '', expToDate = '';
+var expTypes = {expenses:true, sales:true, capital:true, inventory:true, timesheet:true, invoices:true};
+function getExportDateRange(period) {
+  var now = new Date(), pad = function(n) { return String(n).padStart(2,'0'); };
+  var fmtD = function(d) { return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); };
+  var today = fmtD(now), d;
+  if (period === 'today')  return {from:today, to:today};
+  if (period === 'week')   { d = new Date(now); d.setDate(d.getDate()-d.getDay()); return {from:fmtD(d), to:today}; }
+  if (period === 'month')  return {from:now.getFullYear() + '-' + pad(now.getMonth()+1) + '-01', to:today};
+  if (period === 'year')   return {from:now.getFullYear() + '-01-01', to:today};
+  if (period === 'last7')  { d = new Date(now); d.setDate(d.getDate()-6); return {from:fmtD(d), to:today}; }
+  if (period === 'last30') { d = new Date(now); d.setDate(d.getDate()-29); return {from:fmtD(d), to:today}; }
+  if (period === 'last90') { d = new Date(now); d.setDate(d.getDate()-89); return {from:fmtD(d), to:today}; }
+  if (period === 'custom') return {from:expFromDate||today, to:expToDate||today};
+  return {from:today, to:today};
+}
+function inRange(dateStr, from, to) {
+  if (!dateStr) return false; var d = dateStr.slice(0,10); return d >= from && d <= to;
+}
+function buildExportData() {
+  var range = getExportDateRange(expPeriod); var from = range.from; var to = range.to;
+  var rows = [];
+  if (expTypes.expenses) {
+    entries.filter(function(e) { return e.type === 'expense' && inRange(e.date,from,to); }).forEach(function(e) {
+      rows.push({sheet:'Expenses', date:e.date, description:e.description||'', category:e.category||'', amount:Number(e.amount)||0, type:'Expense', branch:'', employee:'', unit:'', qty:'', timeIn:'', timeOut:'', overtime:'', status:'', by:e.createdBy||''});
+    });
   }
+  if (expTypes.capital) {
+    entries.filter(function(e) { return (e.type==='income'||e.type==='capital') && inRange(e.date,from,to); }).forEach(function(e) {
+      rows.push({sheet:'Capital & Income', date:e.date, description:e.description||'', category:e.type==='income'?'Income':'Capital Added', amount:Number(e.amount)||0, type:e.type, branch:'', employee:'', unit:'', qty:'', timeIn:'', timeOut:'', overtime:'', status:'', by:e.createdBy||''});
+    });
+  }
+  if (expTypes.sales) {
+    salesRecords.filter(function(s) { return inRange(s.date,from,to); }).forEach(function(s) {
+      var itemStr = (s.items||[]).map(function(i) { return Number(i.qty).toFixed(1) + i.unit + ' ' + i.name + ' @' + Number(i.price).toFixed(2); }).join('; ');
+      rows.push({sheet:'Sales', date:s.date, description:s.customerName||'Walk-in', category:'Sale', amount:Number(s.total)||0, type:'Sale', branch:s.branch||'', employee:'', unit:itemStr, qty:'', timeIn:'', timeOut:'', overtime:'', status:'', by:s.submittedBy||''});
+    });
+  }
+  if (expTypes.inventory) {
+    movements.filter(function(m) { return inRange(m.date,from,to); }).forEach(function(m) {
+      var item = invItems.find(function(i) { return i.id === m.itemId; });
+      rows.push({sheet:'Inventory', date:m.date, description:(item&&item.name)||m.itemName||'Unknown', category:m.type.toUpperCase(), amount:0, type:'Inventory '+m.type, branch:'', employee:'', unit:(item&&item.unit)||'', qty:Number(m.qty)||0, timeIn:'', timeOut:'', overtime:'', status:m.reason||'', by:m.createdBy||''});
+    });
+  }
+  if (expTypes.timesheet) {
+    timeLogs.filter(function(t) { return inRange(t.date,from,to); }).forEach(function(t) {
+      var emp = employees.find(function(e) { return e.id === t.empId; });
+      rows.push({sheet:'Timesheet', date:t.date, description:(emp&&emp.name)||'Unknown', category:(emp&&emp.role)||'Staff', amount:0, type:'Attendance', branch:(emp&&emp.branch)||'', employee:(emp&&emp.name)||'', unit:'', qty:'', timeIn:t.timeIn||'', timeOut:t.timeOut||'', overtime:Number(t.overtime)||0, status:t.status||'present', by:t.createdBy||''});
+    });
+  }
+  if (expTypes.invoices) {
+    invoices.filter(function(i) { return inRange(i.date,from,to); }).forEach(function(i) {
+      var itemStr = (i.lineItems||[]).map(function(li) { return Number(li.qty).toFixed(1) + li.unit + ' ' + li.name + ' @' + Number(li.price).toFixed(2); }).join('; ');
+      rows.push({sheet:'Invoices', date:i.date, description:i.customerName||'Customer', category:'INV-'+String(i.invoiceNo||'').padStart(3,'0'), amount:Number(i.total)||0, type:'Invoice', branch:'', employee:'', unit:itemStr, qty:'', timeIn:'', timeOut:'', overtime:'', status:i.status||'pending', by:i.createdBy||''});
+    });
+  }
+  rows.sort(function(a,b) { return a.date.localeCompare(b.date) || a.sheet.localeCompare(b.sheet); });
+  return {rows:rows, from:from, to:to};
 }
 
-function inRange(dateStr, from, to){
-  if(!dateStr) return false;
-  const d = dateStr.slice(0,10);
-  return d >= from && d <= to;
+function renderExportPreview() {
+  var result = buildExportData(); var rows = result.rows; var from = result.from; var to = result.to;
+  var el = document.getElementById('exp-preview-rows');
+  var countEl = document.getElementById('exp-preview-count');
+  countEl.textContent = rows.length + ' rows - ' + fmtDate(from) + (from !== to ? ' to ' + fmtDate(to) : '');
+  if (!rows.length) { el.innerHTML = '<div class="empty" style="padding:20px;"><div class="empty-text">No data in selected period</div></div>'; return; }
+  var sheetColors = {'Expenses':'#FCEBEB','Sales':'#E1F5EE','Capital & Income':'#EAF3DE','Inventory':'#F1EFE8','Timesheet':'#E6F1FB','Invoices':'#EEEDFE'};
+  el.innerHTML = rows.slice(0,15).map(function(r) {
+    var bg = sheetColors[r.sheet] || '#F1EFE8';
+    var main = r.sheet === 'Timesheet' ? r.employee + ' - ' + r.status + (r.timeIn ? ' (' + r.timeIn + (r.timeOut ? '-' + r.timeOut : '') + ')' : '') :
+               r.sheet === 'Inventory' ? r.description + ' ' + r.category + (r.qty ? ' x' + r.qty : '') : r.description;
+    var amtStr = r.amount > 0 ? fmt(r.amount) : (r.qty ? r.qty + (r.unit ? ' ' + r.unit : '') : '');
+    return '<div class="exp-preview-row"><span class="bdg" style="background:' + bg + ';color:#1A1A18;flex-shrink:0;">' + r.sheet + '</span>' +
+      '<span class="epc">' + escHtml(fmtDate(r.date)) + ' - ' + escHtml(main) + '</span>' +
+      '<span class="epa">' + amtStr + '</span></div>';
+  }).join('') + (rows.length > 15 ? '<div style="padding:8px 14px;font-size:12px;color:var(--t3);">...and ' + (rows.length-15) + ' more rows in the download</div>' : '');
 }
 
-function buildExportData(){
-  const {from, to} = getExportDateRange(expPeriod);
-  const rows = [];
-
-  if(expTypes.has('expenses')){
-    entries.filter(e=>e.type==='expense'&&inRange(e.date,from,to)).forEach(e=>{
-      rows.push({sheet:'Expenses', date:e.date, description:e.description||'', category:e.category||'', amount:Number(e.amount)||0, type:'Expense', branch:'', employee:'', unit:'', qty:'', timeIn:'', timeOut:'', overtime:'', status:'', submittedBy:e.createdBy||''});
-    });
-  }
-  if(expTypes.has('capital')){
-    entries.filter(e=>(e.type==='income'||e.type==='capital')&&inRange(e.date,from,to)).forEach(e=>{
-      rows.push({sheet:'Capital & Income', date:e.date, description:e.description||'', category:e.type==='income'?'Income':'Capital Added', amount:Number(e.amount)||0, type:e.type, branch:'', employee:'', unit:'', qty:'', timeIn:'', timeOut:'', overtime:'', status:'', submittedBy:e.createdBy||''});
-    });
-  }
-  if(expTypes.has('sales')){
-    salesRecords.filter(s=>inRange(s.date,from,to)).forEach(s=>{
-      const itemStr=(s.items||[]).map(i=>`${Number(i.qty).toFixed(1)}${i.unit||'kg'} ${i.name} @₱${Number(i.price).toFixed(2)}`).join('; ');
-      rows.push({sheet:'Sales', date:s.date, description:s.customerName||'Walk-in', category:'Sale', amount:Number(s.total)||0, type:'Sale', branch:s.branch||'', employee:'', unit:itemStr, qty:'', timeIn:'', timeOut:'', overtime:'', status:'', submittedBy:s.submittedBy||''});
-    });
-  }
-  if(expTypes.has('inventory')){
-    movements.filter(m=>inRange(m.date,from,to)).forEach(m=>{
-      const item=invItems.find(i=>i.id===m.itemId);
-      rows.push({sheet:'Inventory', date:m.date, description:(item?.name||m.itemName||'Unknown'), category:m.type.toUpperCase(), amount:0, type:'Inventory '+m.type, branch:'', employee:'', unit:item?.unit||'', qty:Number(m.qty)||0, timeIn:'', timeOut:'', overtime:'', status:m.reason||'', submittedBy:m.createdBy||''});
-    });
-  }
-  if(expTypes.has('timesheet')){
-    timeLogs.filter(t=>inRange(t.date,from,to)).forEach(t=>{
-      const emp=employees.find(e=>e.id===t.empId);
-      rows.push({sheet:'Timesheet', date:t.date, description:emp?.name||'Unknown', category:emp?.role||'Staff', amount:0, type:'Attendance', branch:emp?.branch||'', employee:emp?.name||'', unit:'', qty:'', timeIn:t.timeIn||'', timeOut:t.timeOut||'', overtime:Number(t.overtime)||0, status:t.status||'present', submittedBy:t.createdBy||''});
-    });
-  }
-  if(expTypes.has('invoices')){
-    invoices.filter(i=>inRange(i.date,from,to)).forEach(i=>{
-      const itemStr=(i.lineItems||[]).map(li=>`${Number(li.qty).toFixed(1)}${li.unit||'kg'} ${li.name} @₱${Number(li.price).toFixed(2)}`).join('; ');
-      rows.push({sheet:'Invoices', date:i.date, description:i.customerName||'Customer', category:'INV-'+String(i.invoiceNo||'').padStart(3,'0'), amount:Number(i.total)||0, type:'Invoice', branch:'', employee:'', unit:itemStr, qty:'', timeIn:'', timeOut:'', overtime:'', status:i.status||'pending', submittedBy:i.createdBy||''});
-    });
-  }
-
-  rows.sort((a,b)=>a.date.localeCompare(b.date)||a.sheet.localeCompare(b.sheet));
-  return {rows, from, to};
-}
-
-function renderExportPreview(){
-  const {rows, from, to} = buildExportData();
-  const el = document.getElementById('exp-preview-rows');
-  const countEl = document.getElementById('exp-preview-count');
-  countEl.textContent = rows.length + ' rows · ' + fmtDate(from) + (from!==to?' – '+fmtDate(to):'');
-  if(!rows.length){
-    el.innerHTML='<div class="empty" style="padding:20px;"><div class="empty-text">No data in selected period</div>Try a wider date range</div>';
-    return;
-  }
-  // show first 15 rows as preview
-  el.innerHTML = rows.slice(0,15).map(r=>{
-    const sheetColors={'Expenses':'#FCEBEB','Sales':'#E1F5EE','Capital & Income':'#EAF3DE','Inventory':'#F1EFE8','Timesheet':'#E6F1FB','Invoices':'#EEEDFE'};
-    const bg=sheetColors[r.sheet]||'#F1EFE8';
-    const main = r.sheet==='Timesheet'
-      ? (r.employee+' — '+r.status+(r.timeIn?' ('+r.timeIn+(r.timeOut?' - '+r.timeOut:'')+')':''))
-      : r.sheet==='Inventory'
-        ? `${r.description} ${r.category} ${r.qty?'×'+r.qty:''}`
-        : r.description;
-    const amtStr = r.amount>0?fmt(r.amount):r.qty?r.qty+(r.unit?' '+r.unit:''):'';
-    return`<div class="exp-preview-row"><span class="bdg" style="background:${bg};color:#1A1A18;flex-shrink:0;">${r.sheet}</span><span class="epc">${escHtml(fmtDate(r.date))} · ${escHtml(main)}</span><span class="epa">${amtStr}</span></div>`;
-  }).join('') + (rows.length>15?`<div style="padding:8px 14px;font-size:12px;color:var(--t3);">...and ${rows.length-15} more rows in the download</div>`:'');
-}
-
-window.toggleExportType = function(card){
-  const type = card.dataset.type;
-  if(expTypes.has(type)){expTypes.delete(type);card.classList.remove('selected');}
-  else{expTypes.add(type);card.classList.add('selected');}
+window.toggleExportType = function(card) {
+  var type = card.dataset.type;
+  expTypes[type] = !expTypes[type];
+  card.classList.toggle('selected', !!expTypes[type]);
+  card.querySelector('.exp-type-check').textContent = expTypes[type] ? 'v' : '';
   renderExportPreview();
 };
-
-window.applyCustomExportPeriod = function(){
+window.applyCustomExportPeriod = function() {
   expFromDate = document.getElementById('exp-from').value;
-  expToDate   = document.getElementById('exp-to').value;
+  expToDate = document.getElementById('exp-to').value;
   renderExportPreview();
 };
-
-// Period button clicks
-document.getElementById('exp-period-grid').addEventListener('click', e=>{
-  const btn = e.target.closest('.ep-btn'); if(!btn) return;
-  document.querySelectorAll('.ep-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  expPeriod = btn.dataset.p;
-  const customDates = document.getElementById('exp-custom-dates');
-  customDates.classList.toggle('show', expPeriod==='custom');
-  if(expPeriod!=='custom') renderExportPreview();
+document.getElementById('exp-period-grid').addEventListener('click', function(e) {
+  var btn = e.target.closest('.ep-btn'); if (!btn) return;
+  document.querySelectorAll('.ep-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active'); expPeriod = btn.dataset.p;
+  var cd = document.getElementById('exp-custom-dates');
+  cd.classList.toggle('show', expPeriod === 'custom');
+  if (expPeriod !== 'custom') renderExportPreview();
 });
-
-window.exportCSV = function(){
-  const {rows, from, to} = buildExportData();
-  if(!rows.length){showToast('No data to export for this period');return;}
-
-  // Build multi-sheet CSV (sheets separated by blank lines + header)
-  const sheets = [...new Set(rows.map(r=>r.sheet))];
-  let csv = '';
-
-  // Summary sheet first
-  csv += 'CATFISH FARM — EXPORT REPORT
-';
-  csv += `Period:,${fmtDate(from)} to ${fmtDate(to)}
-`;
-  csv += `Generated:,${new Date().toLocaleString('en-PH')}
-`;
-  csv += `Generated by:,${userProfile?.name||currentUser?.email||'Unknown'}
-
-`;
-
-  const sheetHeaders = {
-    'Expenses':       ['Date','Description','Category','Amount (₱)','Submitted By'],
-    'Capital & Income':['Date','Description','Type','Amount (₱)','Submitted By'],
-    'Sales':          ['Date','Customer','Branch','Items','Total (₱)','Submitted By'],
-    'Inventory':      ['Date','Item','Movement','Quantity','Unit','Reason','Submitted By'],
-    'Timesheet':      ['Date','Employee','Role','Branch','Status','Time In','Time Out','Hours','Overtime (hrs)','Submitted By'],
-    'Invoices':       ['Date','Customer','Invoice No.','Items','Total (₱)','Status','Submitted By'],
-  };
-  const sheetBuilders = {
-    'Expenses':       r=>[r.date,r.description,r.category,r.amount.toFixed(2),r.submittedBy],
-    'Capital & Income':r=>[r.date,r.description,r.category,r.amount.toFixed(2),r.submittedBy],
-    'Sales':          r=>[r.date,r.description,r.branch,r.unit,r.amount.toFixed(2),r.submittedBy],
-    'Inventory':      r=>[r.date,r.description,r.category,r.qty,r.unit,r.status,r.submittedBy],
-    'Timesheet':      r=>{const hrs=calcHours(r.timeIn,r.timeOut)||'';return[r.date,r.employee,r.category,r.branch,r.status,r.timeIn,r.timeOut,hrs,r.overtime,r.submittedBy];},
-    'Invoices':       r=>[r.date,r.description,r.category,r.unit,r.amount.toFixed(2),r.status,r.submittedBy],
-  };
-
-  sheets.forEach(sheet=>{
-    const sheetRows = rows.filter(r=>r.sheet===sheet);
-    const headers = sheetHeaders[sheet]||['Date','Description','Amount'];
-    const builder = sheetBuilders[sheet]||(r=>[r.date,r.description,r.amount.toFixed(2)]);
-
-    csv += `--- ${sheet.toUpperCase()} (${sheetRows.length} records) ---
-`;
-    csv += headers.map(h=>'"'+h+'"').join(',') + '
-';
-
-    // totals for money sheets
-    let sheetTotal = 0;
-    sheetRows.forEach(r=>{
-      const vals = builder(r);
-      csv += vals.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',') + '
-';
-      if(r.amount>0) sheetTotal += r.amount;
+window.exportCSV = function() {
+  var result = buildExportData(); var rows = result.rows; var from = result.from; var to = result.to;
+  if (!rows.length) { showToast('No data to export'); return; }
+  var NL = '\r\n';
+  var csv = 'CATFISH FARM - EXPORT REPORT' + NL;
+  csv += 'Period:,' + fmtDate(from) + ' to ' + fmtDate(to) + NL;
+  csv += 'Generated:,' + new Date().toLocaleString('en-PH') + NL;
+  csv += 'Generated by:,' + ((userProfile&&userProfile.name)||(currentUser&&currentUser.email)||'Unknown') + NL + NL;
+  var sheets = [];
+  rows.forEach(function(r) { if (sheets.indexOf(r.sheet) < 0) sheets.push(r.sheet); });
+  var hdrs = {'Expenses':['Date','Description','Category','Amount (P)','By'],'Capital & Income':['Date','Description','Type','Amount (P)','By'],'Sales':['Date','Customer','Branch','Items','Total (P)','By'],'Inventory':['Date','Item','Movement','Quantity','Unit','Reason','By'],'Timesheet':['Date','Employee','Role','Branch','Status','Time In','Time Out','Hours','OT hrs','By'],'Invoices':['Date','Customer','Invoice No','Items','Total (P)','Status','By']};
+  var expTotal = 0, salesTotal = 0, capTotal = 0;
+  sheets.forEach(function(sheet) {
+    var srows = rows.filter(function(r) { return r.sheet === sheet; });
+    var headers = hdrs[sheet] || ['Date','Description','Amount'];
+    csv += '--- ' + sheet.toUpperCase() + ' (' + srows.length + ' records) ---' + NL;
+    csv += headers.map(function(h) { return '"' + h + '"'; }).join(',') + NL;
+    var sheetTotal = 0;
+    srows.forEach(function(r) {
+      var vals;
+      if (sheet === 'Expenses')          vals = [r.date,r.description,r.category,r.amount.toFixed(2),r.by];
+      else if (sheet === 'Capital & Income') vals = [r.date,r.description,r.category,r.amount.toFixed(2),r.by];
+      else if (sheet === 'Sales')        vals = [r.date,r.description,r.branch,r.unit,r.amount.toFixed(2),r.by];
+      else if (sheet === 'Inventory')    vals = [r.date,r.description,r.category,r.qty,r.unit,r.status,r.by];
+      else if (sheet === 'Timesheet')    vals = [r.date,r.employee,r.category,r.branch,r.status,r.timeIn,r.timeOut,calcHours(r.timeIn,r.timeOut)||'',r.overtime,r.by];
+      else if (sheet === 'Invoices')     vals = [r.date,r.description,r.category,r.unit,r.amount.toFixed(2),r.status,r.by];
+      else vals = [r.date,r.description,r.amount.toFixed(2)];
+      csv += vals.map(function(v) { return '"' + String(v||'').replace(/"/g,'""') + '"'; }).join(',') + NL;
+      sheetTotal += r.amount;
     });
-    if(['Expenses','Sales','Capital & Income','Invoices'].includes(sheet)){
-      csv += `"TOTAL",${'""'.repeat(headers.length-2)},"${sheetTotal.toFixed(2)}"
-`;
+    if (['Expenses','Sales','Capital & Income','Invoices'].indexOf(sheet) >= 0) {
+      csv += '"TOTAL",' + Array(headers.length-2).fill('""').join(',') + ',"' + sheetTotal.toFixed(2) + '"' + NL;
     }
-    csv += '
-';
+    if (sheet === 'Expenses') expTotal = sheetTotal;
+    if (sheet === 'Sales') salesTotal = sheetTotal;
+    if (sheet === 'Capital & Income') capTotal = sheetTotal;
+    csv += NL;
   });
-
-  // Grand summary
-  csv += '--- SUMMARY ---
-';
-  csv += '"Category","Total (₱)"
-';
-  const expTotal = rows.filter(r=>r.sheet==='Expenses').reduce((s,r)=>s+r.amount,0);
-  const salesTotal = rows.filter(r=>r.sheet==='Sales').reduce((s,r)=>s+r.amount,0);
-  const capTotal = rows.filter(r=>r.sheet==='Capital & Income').reduce((s,r)=>s+r.amount,0);
-  const invTotal = rows.filter(r=>r.sheet==='Invoices').reduce((s,r)=>s+r.amount,0);
-  if(expTotal>0)   csv += `"Total Expenses","${expTotal.toFixed(2)}"
-`;
-  if(salesTotal>0) csv += `"Total Sales","${salesTotal.toFixed(2)}"
-`;
-  if(capTotal>0)   csv += `"Total Capital & Income","${capTotal.toFixed(2)}"
-`;
-  if(invTotal>0)   csv += `"Total Invoiced","${invTotal.toFixed(2)}"
-`;
-  csv += `"Net Profit (Income − Expenses)","${(salesTotal+capTotal-expTotal).toFixed(2)}"
-`;
-
-  // Download
-  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const periodLabel = expPeriod==='custom'?from+'_to_'+to:expPeriod;
-  a.href = url;
-  a.download = `CatFish_Report_${periodLabel}_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast('✓ CSV downloaded!');
+  csv += '--- SUMMARY ---' + NL + '"Category","Total (P)"' + NL;
+  if (expTotal > 0)   csv += '"Total Expenses","' + expTotal.toFixed(2) + '"' + NL;
+  if (salesTotal > 0) csv += '"Total Sales","' + salesTotal.toFixed(2) + '"' + NL;
+  if (capTotal > 0)   csv += '"Total Capital & Income","' + capTotal.toFixed(2) + '"' + NL;
+  csv += '"Net Profit","' + (salesTotal + capTotal - expTotal).toFixed(2) + '"' + NL;
+  var blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'CatFish_Report_' + expPeriod + '_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('CSV downloaded!');
 };
-
-window.exportPrint = function(){
-  const {rows, from, to} = buildExportData();
-  if(!rows.length){showToast('No data to export for this period');return;}
-
-  const sheets = [...new Set(rows.map(r=>r.sheet))];
-  const expTotal   = rows.filter(r=>r.sheet==='Expenses').reduce((s,r)=>s+r.amount,0);
-  const salesTotal = rows.filter(r=>r.sheet==='Sales').reduce((s,r)=>s+r.amount,0);
-  const capTotal   = rows.filter(r=>r.sheet==='Capital & Income').reduce((s,r)=>s+r.amount,0);
-  const net        = salesTotal + capTotal - expTotal;
-
-  const sheetColors={'Expenses':'#FCEBEB','Sales':'#E1F5EE','Capital & Income':'#EAF3DE','Inventory':'#F1EFE8','Timesheet':'#E6F1FB','Invoices':'#EEEDFE'};
-
-  let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
-  <style>
-    body{font-family:DM Sans,Arial,sans-serif;font-size:12px;color:#1A1A18;padding:24px;max-width:900px;margin:0 auto;}
-    h1{font-size:20px;font-weight:700;color:#0F6E56;margin-bottom:2px;}
-    .meta{font-size:11px;color:#888;margin-bottom:20px;}
-    .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;}
-    .sum-card{background:#F5F7F5;border-radius:8px;padding:12px;}
-    .sum-label{font-size:10px;color:#888;margin-bottom:4px;}
-    .sum-val{font-size:18px;font-weight:700;}
-    .sum-val.g{color:#0F6E56;}.sum-val.r{color:#C0392B;}
-    h2{font-size:14px;font-weight:700;margin:20px 0 8px;padding:6px 10px;border-radius:6px;}
-    table{width:100%;border-collapse:collapse;margin-bottom:16px;}
-    th{font-size:10px;font-weight:700;color:#888;text-transform:uppercase;padding:6px 8px;border-bottom:2px solid #ddd;text-align:left;}
-    td{padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;}
-    tr:last-child td{border-bottom:none;}
-    .total-row td{font-weight:700;border-top:2px solid #ddd;background:#f9f9f9;}
-    .pos{color:#0F6E56;font-weight:600;}.neg{color:#C0392B;font-weight:600;}
-    @media print{@page{margin:1cm;}body{padding:0;}}
-  </style></head><body>
-  <h1>🐟 CatFish Farm — Export Report</h1>
-  <div class="meta">Period: <b>${fmtDate(from)}${from!==to?' to '+fmtDate(to):''}</b> &nbsp;·&nbsp; Generated: ${new Date().toLocaleString('en-PH')} &nbsp;·&nbsp; By: ${escHtml(userProfile?.name||currentUser?.email||'Unknown')}</div>
-  <div class="summary-grid">
-    <div class="sum-card"><div class="sum-label">Total Sales</div><div class="sum-val g">${fmt(salesTotal)}</div></div>
-    <div class="sum-card"><div class="sum-label">Total Expenses</div><div class="sum-val r">${fmt(expTotal)}</div></div>
-    <div class="sum-card"><div class="sum-label">Capital / Income</div><div class="sum-val">${fmt(capTotal)}</div></div>
-    <div class="sum-card"><div class="sum-label">Net Profit</div><div class="sum-val ${net>=0?'g':'r'}">${fmt(net)}</div></div>
-  </div>`;
-
-  sheets.forEach(sheet=>{
-    const sheetRows = rows.filter(r=>r.sheet===sheet);
-    const bg = sheetColors[sheet]||'#F1EFE8';
-    html += `<h2 style="background:${bg}">${sheet} <span style="font-weight:400;font-size:12px;">(${sheetRows.length} records)</span></h2><table>`;
-
-    if(sheet==='Expenses'){
+window.exportPrint = function() {
+  var result = buildExportData(); var rows = result.rows; var from = result.from; var to = result.to;
+  if (!rows.length) { showToast('No data to export'); return; }
+  var sheets = []; rows.forEach(function(r) { if (sheets.indexOf(r.sheet) < 0) sheets.push(r.sheet); });
+  var expT = rows.filter(function(r){return r.sheet==='Expenses';}).reduce(function(s,r){return s+r.amount;},0);
+  var salT = rows.filter(function(r){return r.sheet==='Sales';}).reduce(function(s,r){return s+r.amount;},0);
+  var capT = rows.filter(function(r){return r.sheet==='Capital & Income';}).reduce(function(s,r){return s+r.amount;},0);
+  var net = salT + capT - expT;
+  var sc = {'Expenses':'#FCEBEB','Sales':'#E1F5EE','Capital & Income':'#EAF3DE','Inventory':'#F1EFE8','Timesheet':'#E6F1FB','Invoices':'#EEEDFE'};
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;max-width:900px;margin:0 auto;}h1{font-size:20px;font-weight:700;color:#0F6E56;margin-bottom:2px;}.meta{font-size:11px;color:#888;margin-bottom:20px;}.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;}.sc{background:#F5F7F5;border-radius:8px;padding:12px;}.sl{font-size:10px;color:#888;margin-bottom:4px;}.sv{font-size:18px;font-weight:700;}.g{color:#0F6E56;}.r{color:#C0392B;}h2{font-size:14px;font-weight:700;margin:20px 0 8px;padding:6px 10px;border-radius:6px;}table{width:100%;border-collapse:collapse;margin-bottom:16px;}th{font-size:10px;font-weight:700;color:#888;text-transform:uppercase;padding:6px 8px;border-bottom:2px solid #ddd;text-align:left;}td{padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;}tr:last-child td{border-bottom:none;}.tr td{font-weight:700;border-top:2px solid #ddd;background:#f9f9f9;}.pos{color:#0F6E56;font-weight:600;}.neg{color:#C0392B;font-weight:600;}@media print{@page{margin:1cm;}}</style></head><body>';
+  html += '<h1>CatFish Farm - Export Report</h1>';
+  html += '<div class="meta">Period: <b>' + fmtDate(from) + (from!==to?' to '+fmtDate(to):'') + '</b> &nbsp; Generated: ' + new Date().toLocaleString('en-PH') + ' &nbsp; By: ' + escHtml((userProfile&&userProfile.name)||(currentUser&&currentUser.email)||'Unknown') + '</div>';
+  html += '<div class="sg"><div class="sc"><div class="sl">Total Sales</div><div class="sv g">' + fmt(salT) + '</div></div><div class="sc"><div class="sl">Total Expenses</div><div class="sv r">' + fmt(expT) + '</div></div><div class="sc"><div class="sl">Capital/Income</div><div class="sv">' + fmt(capT) + '</div></div><div class="sc"><div class="sl">Net Profit</div><div class="sv ' + (net>=0?'g':'r') + '">' + fmt(net) + '</div></div></div>';
+  sheets.forEach(function(sheet) {
+    var srows = rows.filter(function(r) { return r.sheet === sheet; });
+    var bg = sc[sheet] || '#F1EFE8';
+    html += '<h2 style="background:' + bg + '">' + sheet + ' (' + srows.length + ' records)</h2><table>';
+    if (sheet === 'Expenses') {
       html += '<tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>By</th></tr>';
-      sheetRows.forEach(r=>{ html += `<tr><td>${fmtDate(r.date)}</td><td>${escHtml(r.description)}</td><td>${escHtml(r.category)}</td><td class="neg">−${fmt(r.amount)}</td><td>${escHtml(r.submittedBy)}</td></tr>`; });
-      html += `<tr class="total-row"><td colspan="3">Total</td><td class="neg">${fmt(expTotal)}</td><td></td></tr>`;
-    } else if(sheet==='Sales'){
+      srows.forEach(function(r) { html += '<tr><td>' + fmtDate(r.date) + '</td><td>' + escHtml(r.description) + '</td><td>' + escHtml(r.category) + '</td><td class="neg">-' + fmt(r.amount) + '</td><td>' + escHtml(r.by) + '</td></tr>'; });
+      html += '<tr class="tr"><td colspan="3">Total</td><td class="neg">' + fmt(expT) + '</td><td></td></tr>';
+    } else if (sheet === 'Sales') {
       html += '<tr><th>Date</th><th>Customer</th><th>Branch</th><th>Items</th><th>Total</th></tr>';
-      sheetRows.forEach(r=>{ html += `<tr><td>${fmtDate(r.date)}</td><td>${escHtml(r.description)}</td><td>${escHtml(r.branch)}</td><td style="font-size:10px;">${escHtml(r.unit)}</td><td class="pos">${fmt(r.amount)}</td></tr>`; });
-      html += `<tr class="total-row"><td colspan="4">Total</td><td class="pos">${fmt(salesTotal)}</td></tr>`;
-    } else if(sheet==='Capital & Income'){
+      srows.forEach(function(r) { html += '<tr><td>' + fmtDate(r.date) + '</td><td>' + escHtml(r.description) + '</td><td>' + escHtml(r.branch) + '</td><td style="font-size:10px;">' + escHtml(r.unit) + '</td><td class="pos">' + fmt(r.amount) + '</td></tr>'; });
+      html += '<tr class="tr"><td colspan="4">Total</td><td class="pos">' + fmt(salT) + '</td></tr>';
+    } else if (sheet === 'Capital & Income') {
       html += '<tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th>By</th></tr>';
-      sheetRows.forEach(r=>{ html += `<tr><td>${fmtDate(r.date)}</td><td>${escHtml(r.description)}</td><td>${escHtml(r.category)}</td><td class="pos">+${fmt(r.amount)}</td><td>${escHtml(r.submittedBy)}</td></tr>`; });
-      html += `<tr class="total-row"><td colspan="3">Total</td><td class="pos">${fmt(capTotal)}</td><td></td></tr>`;
-    } else if(sheet==='Inventory'){
+      srows.forEach(function(r) { html += '<tr><td>' + fmtDate(r.date) + '</td><td>' + escHtml(r.description) + '</td><td>' + escHtml(r.category) + '</td><td class="pos">+' + fmt(r.amount) + '</td><td>' + escHtml(r.by) + '</td></tr>'; });
+      html += '<tr class="tr"><td colspan="3">Total</td><td class="pos">' + fmt(capT) + '</td><td></td></tr>';
+    } else if (sheet === 'Inventory') {
       html += '<tr><th>Date</th><th>Item</th><th>Movement</th><th>Qty</th><th>Unit</th><th>Reason</th><th>By</th></tr>';
-      sheetRows.forEach(r=>{ html += `<tr><td>${fmtDate(r.date)}</td><td>${escHtml(r.description)}</td><td>${escHtml(r.category)}</td><td>${r.qty}</td><td>${escHtml(r.unit)}</td><td>${escHtml(r.status)}</td><td>${escHtml(r.submittedBy)}</td></tr>`; });
-    } else if(sheet==='Timesheet'){
-      html += '<tr><th>Date</th><th>Employee</th><th>Branch</th><th>Status</th><th>In</th><th>Out</th><th>Hours</th><th>OT hrs</th></tr>';
-      sheetRows.forEach(r=>{ const hrs=calcHours(r.timeIn,r.timeOut)||'—'; html += `<tr><td>${fmtDate(r.date)}</td><td>${escHtml(r.employee)}</td><td>${escHtml(r.branch)}</td><td>${escHtml(r.status)}</td><td>${r.timeIn||'—'}</td><td>${r.timeOut||'—'}</td><td>${hrs}</td><td>${r.overtime||0}</td></tr>`; });
-    } else if(sheet==='Invoices'){
-      html += '<tr><th>Date</th><th>Customer</th><th>Invoice #</th><th>Items</th><th>Total</th><th>Status</th></tr>';
-      sheetRows.forEach(r=>{ html += `<tr><td>${fmtDate(r.date)}</td><td>${escHtml(r.description)}</td><td>${escHtml(r.category)}</td><td style="font-size:10px;">${escHtml(r.unit)}</td><td class="pos">${fmt(r.amount)}</td><td>${escHtml(r.status)}</td></tr>`; });
+      srows.forEach(function(r) { html += '<tr><td>' + fmtDate(r.date) + '</td><td>' + escHtml(r.description) + '</td><td>' + escHtml(r.category) + '</td><td>' + r.qty + '</td><td>' + escHtml(r.unit) + '</td><td>' + escHtml(r.status) + '</td><td>' + escHtml(r.by) + '</td></tr>'; });
+    } else if (sheet === 'Timesheet') {
+      html += '<tr><th>Date</th><th>Employee</th><th>Branch</th><th>Status</th><th>In</th><th>Out</th><th>Hours</th><th>OT</th></tr>';
+      srows.forEach(function(r) { var hrs = calcHours(r.timeIn, r.timeOut) || '-'; html += '<tr><td>' + fmtDate(r.date) + '</td><td>' + escHtml(r.employee) + '</td><td>' + escHtml(r.branch) + '</td><td>' + escHtml(r.status) + '</td><td>' + (r.timeIn||'-') + '</td><td>' + (r.timeOut||'-') + '</td><td>' + hrs + '</td><td>' + (r.overtime||0) + '</td></tr>'; });
+    } else if (sheet === 'Invoices') {
+      html += '<tr><th>Date</th><th>Customer</th><th>Invoice No</th><th>Items</th><th>Total</th><th>Status</th></tr>';
+      srows.forEach(function(r) { html += '<tr><td>' + fmtDate(r.date) + '</td><td>' + escHtml(r.description) + '</td><td>' + escHtml(r.category) + '</td><td style="font-size:10px;">' + escHtml(r.unit) + '</td><td class="pos">' + fmt(r.amount) + '</td><td>' + escHtml(r.status) + '</td></tr>'; });
     }
     html += '</table>';
   });
-
-  html += '<scr'+'ipt>window.onload=function(){window.print();}<\/scr'+'ipt></body></html>';
-
-  const win = window.open('','_blank');
-  if(win){ win.document.write(html); win.document.close(); }
-  else { showToast('Allow pop-ups to use print report'); }
+  html += '<scr' + 'ipt>window.onload=function(){window.print();}<\/scr' + 'ipt></body></html>';
+  var win = window.open('', '_blank');
+  if (!win) { showToast('Allow pop-ups to print report'); return; }
+  win.document.write(html); win.document.close();
 };
 
-// Render preview when export tab is opened
-// ── FAB ──
-document.getElementById('fab').addEventListener('click',()=>{
-  const active=document.querySelector('.nb.active')?.dataset.s;
-  if(active==='inventory'){openAddItem();return;}
-  if(active==='sales'){openNewSale();return;}
-  if(active==='invoices'){openNewInvoice();return;}
-  if(active==='timesheet'&&(isOwner()||isManager())){openAddEmployee();return;}
-  const today=new Date().toISOString().split('T')[0];
-  document.getElementById('e-date').value=today;
-  document.getElementById('e-desc').value='';document.getElementById('e-amount').value='';
-  document.getElementById('e-notes').value='';document.getElementById('e-preview').style.display='none';
-  document.getElementById('e-fname').textContent='';document.getElementById('file-inp').value='';
-  pendingFile=null;window.onTypeChange();document.getElementById('modal-entry').classList.add('open');
+// FAB
+document.getElementById('fab').addEventListener('click', function() {
+  var active = (document.querySelector('.nb.active') || {}).dataset || {};
+  var s = active.s;
+  if (s === 'inventory') { openAddItem(); return; }
+  if (s === 'sales') { window.openNewSale(); return; }
+  if (s === 'invoices') { window.openNewInvoice(); return; }
+  if (s === 'timesheet' && (isOwner() || isManager())) { window.openAddEmployee(); return; }
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('e-date').value = today;
+  document.getElementById('e-desc').value = ''; document.getElementById('e-amount').value = '';
+  document.getElementById('e-notes').value = ''; document.getElementById('e-preview').style.display = 'none';
+  document.getElementById('e-fname').textContent = ''; document.getElementById('file-inp').value = '';
+  pendingFile = null; window.onTypeChange();
+  document.getElementById('modal-entry').classList.add('open');
 });
 
-// chip filters
-document.getElementById('cat-chips').addEventListener('click',e=>{const chip=e.target.closest('.chip');if(!chip)return;document.querySelectorAll('#cat-chips .chip').forEach(c=>c.classList.remove('active'));chip.classList.add('active');renderExpenses();});
+// EVENT LISTENERS
+document.getElementById('cat-chips').addEventListener('click', function(e) {
+  var chip = e.target.closest('.chip'); if (!chip) return;
+  document.querySelectorAll('#cat-chips .chip').forEach(function(c) { c.classList.remove('active'); });
+  chip.classList.add('active'); renderExpenses();
+});
+document.querySelectorAll('.mo').forEach(function(ov) {
+  ov.addEventListener('click', function(e) { if (e.target === ov) ov.classList.remove('open'); });
+});
 
-// close modals on overlay tap
-document.querySelectorAll('.mo').forEach(ov=>{ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});});
-
-// ── LOGIN / AUTH ──
-window.doLogin=async function(){
-  const email=document.getElementById('login-email').value.trim();
-  const pw=document.getElementById('login-password').value;
-  const btn=document.getElementById('login-btn');const errEl=document.getElementById('login-error');
-  errEl.textContent='';
-  if(!email||!pw){errEl.textContent='Please enter your email and password.';return;}
-  btn.disabled=true;btn.innerHTML='<span class="sp"></span> Signing in...';
-  try{await signInWithEmailAndPassword(auth,email,pw);}
-  catch(e){
-    const msgs={'auth/invalid-credential':'Wrong email or password.','auth/invalid-email':'Email not valid.','auth/user-not-found':'No account found.','auth/wrong-password':'Wrong password.','auth/too-many-requests':'Too many attempts. Try again later.','auth/network-request-failed':'No internet.','auth/api-key-not-valid':'Firebase config error.'};
-    errEl.textContent=msgs[e.code]||('Error: '+e.message);
-    btn.disabled=false;btn.textContent='Sign In';
+// LOGIN
+window.doLogin = async function() {
+  var email = document.getElementById('login-email').value.trim();
+  var pw = document.getElementById('login-password').value;
+  var btn = document.getElementById('login-btn'); var errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  if (!email || !pw) { errEl.textContent = 'Please enter your email and password.'; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="sp"></span> Signing in...';
+  try { await signInWithEmailAndPassword(auth, email, pw); }
+  catch(e) {
+    var msgs = {'auth/invalid-credential':'Wrong email or password.','auth/invalid-email':'Email not valid.','auth/user-not-found':'No account found.','auth/wrong-password':'Wrong password.','auth/too-many-requests':'Too many attempts. Try again later.','auth/network-request-failed':'No internet.','auth/api-key-not-valid':'Firebase config error. Check credentials in the file.'};
+    errEl.textContent = msgs[e.code] || ('Error: ' + e.message);
+    btn.disabled = false; btn.textContent = 'Sign In';
   }
 };
-window.doLogout=async function(){if(!confirm('Sign out?'))return;stopClock();await signOut(auth);};
-document.getElementById('login-password').addEventListener('keydown',e=>{if(e.key==='Enter')window.doLogin();});
+window.doLogout = async function() {
+  if (!confirm('Sign out?')) return; stopClock(); await signOut(auth);
+};
+document.getElementById('login-password').addEventListener('keydown', function(e) { if (e.key === 'Enter') window.doLogin(); });
 
-// ── INIT ──
-function showInitError(msg){document.getElementById('login-error').textContent='⚠️ '+msg;document.getElementById('login-btn').disabled=false;document.getElementById('login-btn').textContent='Sign In';}
-
+// INIT
+function showInitError(msg) {
+  document.getElementById('login-error').textContent = 'Error: ' + msg;
+  document.getElementById('login-btn').disabled = false; document.getElementById('login-btn').textContent = 'Sign In';
+}
 checkQRLogin();
-
-// init sales date filter
-(function(){
-  const today=new Date().toISOString().split('T')[0];const m='01';
-  const from=today.slice(0,8)+m;
-  const f=document.getElementById('sr-from'),t=document.getElementById('sr-to');
-  if(f)f.value=from;if(t)t.value=today;
-  salesDateFrom=from;salesDateTo=today;
+(function() {
+  var today = new Date().toISOString().split('T')[0];
+  var monthStart = today.slice(0,8) + '01';
+  var f = document.getElementById('sr-from'), t = document.getElementById('sr-to');
+  if (f) f.value = monthStart; if (t) t.value = today;
+  salesDateFrom = monthStart; salesDateTo = today;
 })();
 
-if(!isConfigured){
+if (!isConfigured) {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
-  showToast('⚠️ Paste your 6 Firebase credentials in the HTML file',6000);
-  document.getElementById('tb-sub').textContent='Configure Firebase first';
-}else{
-  try{
-    app=initializeApp(FIREBASE_CONFIG);auth=getAuth(app);db=getFirestore(app);
-    onAuthStateChanged(auth,async user=>{
-      if(user){
-        currentUser=user;
-        // load user profile from Firestore
-        try{
-          // Check owner emails first — owners always have owner access
-          const emailLower = user.email.toLowerCase();
-          const isHardcodedOwner = OWNER_EMAILS.map(e=>e.toLowerCase()).includes(emailLower);
-
-          const profSnap=await db.collection('userProfiles').where('email','==',user.email).limit(1).get();
-          if(!profSnap.empty){
-            const profileData = profSnap.docs[0].data();
-            // Owner email always gets owner role even if profile says otherwise
-            userProfile = isHardcodedOwner ? {...profileData, role:'owner'} : profileData;
-          } else if(isHardcodedOwner){
-            // Owner email but no profile yet — auto-create owner profile
-            const ownerData = {role:'owner', name:user.email.split('@')[0], email:user.email, createdAt:serverTimestamp()};
-            await db.collection('userProfiles').add(ownerData);
+  showToast('Paste your 6 Firebase credentials in the HTML file', 6000);
+  document.getElementById('tb-sub').textContent = 'Configure Firebase first';
+} else {
+  try {
+    app = initializeApp(FIREBASE_CONFIG); auth = getAuth(app); db = getFirestore(app);
+    onAuthStateChanged(auth, async function(user) {
+      if (user) {
+        currentUser = user;
+        try {
+          var emailLower = user.email.toLowerCase();
+          var isHardcodedOwner = OWNER_EMAILS.map(function(e) { return e.toLowerCase(); }).indexOf(emailLower) >= 0;
+          var profSnap = await db.collection('userProfiles').where('email','==',user.email).limit(1).get();
+          if (!profSnap.empty) {
+            var pd = profSnap.docs[0].data();
+            userProfile = isHardcodedOwner ? Object.assign({}, pd, {role:'owner'}) : pd;
+          } else if (isHardcodedOwner) {
+            var odata = {role:'owner', name:user.email.split('@')[0], email:user.email, createdAt:serverTimestamp()};
+            await db.collection('userProfiles').add(odata);
             userProfile = {role:'owner', name:user.email.split('@')[0], email:user.email};
           } else {
-            // No profile found and not an owner — show role setup screen
             userProfile = {role:'staff', name:user.email.split('@')[0], email:user.email};
-            showToast('⚠️ No role assigned yet. Ask the owner to add you in the Users tab.', 5000);
+            showToast('No role assigned. Ask the owner to add you in the Users tab.', 5000);
           }
-        }catch(e){
-          const emailLower = user.email.toLowerCase();
-          const isHardcodedOwner = OWNER_EMAILS.map(e=>e.toLowerCase()).includes(emailLower);
-          userProfile={role:isHardcodedOwner?'owner':'staff', name:user.email.split('@')[0], email:user.email};
+        } catch(e) {
+          var eml = user.email.toLowerCase();
+          var isOwnerFallback = OWNER_EMAILS.map(function(x) { return x.toLowerCase(); }).indexOf(eml) >= 0;
+          userProfile = {role: isOwnerFallback ? 'owner' : 'staff', name:user.email.split('@')[0], email:user.email};
         }
-
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
-        const roleCap=role().charAt(0).toUpperCase()+role().slice(1);
-        document.getElementById('tb-sub').textContent=roleCap+' account';
-        document.getElementById('user-label').textContent=(userProfile?.name||user.email.split('@')[0]);
-        // show alert bell only for owners
-        if(isOwner()) document.getElementById('alert-bell').classList.remove('hidden');
-
-        // Build nav based on role
-        buildNav();
-        renderBranchTabs();
-
-        // Subscribe to collections based on role
-        // All roles get inventory, sales, invoices, timeLogs, movements
-        onSnapshot(query(collection(db,'entries'),orderBy('date','desc')),snap=>{entries=snap.docs.map(d=>({id:d.id,...d.data()}));document.getElementById('sync-dot').classList.add('live');render();},err=>{document.getElementById('sync-dot').classList.remove('live');showToast('Sync error: '+err.message,5000);});
-        onSnapshot(query(collection(db,'invItems'),orderBy('name','asc')),snap=>{invItems=snap.docs.map(d=>({id:d.id,...d.data()}));renderInvItems();renderMovements();},err=>showToast('Inv sync error',4000));
-        onSnapshot(query(collection(db,'movements'),orderBy('date','desc')),snap=>{movements=snap.docs.map(d=>({id:d.id,...d.data()}));renderMovements();},err=>showToast('Movements sync error',4000));
-        onSnapshot(query(collection(db,'invoices'),orderBy('date','desc')),snap=>{invoices=snap.docs.map(d=>({id:d.id,...d.data()}));renderInvoiceList();},err=>showToast('Invoice sync error',4000));
-        onSnapshot(query(collection(db,'sales'),orderBy('date','desc')),snap=>{salesRecords=snap.docs.map(d=>({id:d.id,...d.data()}));renderBranchTabs();renderSalesList();},err=>showToast('Sales sync error',4000));
-        onSnapshot(query(collection(db,'employees'),orderBy('name','asc')),snap=>{employees=snap.docs.map(d=>({id:d.id,...d.data()}));renderEmployeeList();if(isStaff())renderStaffTimesheetView();},err=>showToast('Employee sync error',4000));
-        onSnapshot(query(collection(db,'timeLogs'),orderBy('date','desc')),snap=>{timeLogs=snap.docs.map(d=>({id:d.id,...d.data()}));renderEmployeeList();if(isStaff())renderStaffTimesheetView();if(currentEmpId)renderEmpDetail(currentEmpId);},err=>showToast('Timesheet sync error',4000));
-        onSnapshot(doc(db,'settings','branches'),snap=>{if(snap.exists()){branches=snap.data().list||[];}else{branches=[];}renderBranchTabs();},()=>{branches=[];});
-        if(isOwner()||isManager()){
-          onSnapshot(query(collection(db,'userProfiles'),orderBy('name','asc')),snap=>{userProfiles=snap.docs.map(d=>({id:d.id,...d.data()}));},err=>{});
+        var roleCap = role().charAt(0).toUpperCase() + role().slice(1);
+        document.getElementById('tb-sub').textContent = roleCap + ' account';
+        document.getElementById('user-label').textContent = (userProfile&&userProfile.name) || user.email.split('@')[0];
+        if (isOwner()) document.getElementById('alert-bell').classList.remove('hidden');
+        buildNav(); renderBranchTabs();
+        onSnapshot(query(collection(db,'entries'),orderBy('date','desc')), function(snap) { entries = snap.docs.map(function(d) { return Object.assign({id:d.id}, d.data()); }); document.getElementById('sync-dot').classList.add('live'); render(); }, function(err) { document.getElementById('sync-dot').classList.remove('live'); showToast('Sync error: ' + err.message, 5000); });
+        onSnapshot(query(collection(db,'invItems'),orderBy('name','asc')), function(snap) { invItems = snap.docs.map(function(d) { return Object.assign({id:d.id}, d.data()); }); renderInvItems(); renderMovements(); }, function(err) { showToast('Inventory sync error', 4000); });
+        onSnapshot(query(collection(db,'movements'),orderBy('date','desc')), function(snap) { movements = snap.docs.map(function(d) { return Object.assign({id:d.id}, d.data()); }); renderMovements(); }, function(err) { showToast('Movements sync error', 4000); });
+        onSnapshot(query(collection(db,'invoices'),orderBy('date','desc')), function(snap) { invoices = snap.docs.map(function(d) { return Object.assign({id:d.id}, d.data()); }); renderInvoiceList(); }, function(err) { showToast('Invoice sync error', 4000); });
+        onSnapshot(query(collection(db,'sales'),orderBy('date','desc')), function(snap) { salesRecords = snap.docs.map(function(d) { return Object.assign({id:d.id}, d.data()); }); renderBranchTabs(); renderSalesList(); }, function(err) { showToast('Sales sync error', 4000); });
+        onSnapshot(query(collection(db,'employees'),orderBy('name','asc')), function(snap) { employees = snap.docs.map(function(d) { return Object.assign({id:d.id}, d.data()); }); renderEmployeeList(); if (isStaff()) renderStaffView(); }, function(err) { showToast('Employee sync error', 4000); });
+        onSnapshot(query(collection(db,'timeLogs'),orderBy('date','desc')), function(snap) { timeLogs = snap.docs.map(function(d) { return Object.assign({id:d.id}, d.data()); }); renderEmployeeList(); if (isStaff()) renderStaffView(); if (currentEmpId) renderEmpDetail(currentEmpId); }, function(err) { showToast('Timesheet sync error', 4000); });
+        onSnapshot(doc(db,'settings','branches'), function(snap) { if (snap.exists()) { branches = snap.data().list || []; } else { branches = []; } renderBranchTabs(); }, function() { branches = []; });
+        if (isOwner() || isManager()) {
+          onSnapshot(query(collection(db,'userProfiles'),orderBy('name','asc')), function(snap) { userProfiles = snap.docs.map(function(d) { return Object.assign({id:d.id}, d.data()); }); }, function(err) {});
         }
-        if(isOwner()){
-          onSnapshot(query(collection(db,'changelog'),orderBy('createdAt','desc')),snap=>{
-            changeLog=snap.docs.map(d=>({id:d.id,...d.data()}));
-            unreadAlerts=changeLog.filter(c=>!c.isRead).length;
-            const badge=document.getElementById('alert-count');
-            const bell=document.getElementById('alert-bell');
-            badge.textContent=unreadAlerts>0?unreadAlerts:'';
-            bell.style.opacity=unreadAlerts>0?'1':'0.5';
-            if(document.querySelector('#screen-changelog.active'))renderChangelog();
-          },err=>{});
+        if (isOwner()) {
+          onSnapshot(query(collection(db,'changelog'),orderBy('createdAt','desc')), function(snap) {
+            changeLog = snap.docs.map(function(d) { return Object.assign({id:d.id}, d.data()); });
+            unreadAlerts = changeLog.filter(function(c) { return !c.isRead; }).length;
+            var badge = document.getElementById('alert-count'); var bell = document.getElementById('alert-bell');
+            badge.textContent = unreadAlerts > 0 ? unreadAlerts : '';
+            bell.style.opacity = unreadAlerts > 0 ? '1' : '0.5';
+            if (document.querySelector('#screen-changelog.active')) renderChangelog();
+          }, function(err) {});
         }
-
-        // After login, show clock screen if staff or manager (or QR scanned)
-        if(window._qrEmpId || isStaff() || isManager()){
-          setTimeout(()=>openClockScreen(),600);
+        if (window._qrEmpId || isStaff() || isManager()) {
+          setTimeout(function() { openClockScreen(); }, 600);
         }
-
-      }else{
-        currentUser=null;userProfile=null;
+      } else {
+        currentUser = null; userProfile = null;
         document.getElementById('login-screen').classList.remove('hidden');
         document.getElementById('app').classList.add('hidden');
         document.getElementById('clock-screen').classList.remove('open');
-        document.getElementById('fab').style.display='none';
-        entries=[];invItems=[];movements=[];invoices=[];salesRecords=[];employees=[];timeLogs=[];branches=[];userProfiles=[];changeLog=[];
+        document.getElementById('fab').style.display = 'none';
+        entries = []; invItems = []; movements = []; invoices = []; salesRecords = []; employees = []; timeLogs = []; branches = []; userProfiles = []; changeLog = [];
         stopClock();
       }
-    },err=>showInitError('Auth error: '+err.message));
-  }catch(err){showInitError('Setup error: '+err.message);}
+    }, function(err) { showInitError('Auth error: ' + err.message); });
+  } catch(err) { showInitError('Setup error: ' + err.message); }
 }
 </script>
 </body>
