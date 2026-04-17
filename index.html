@@ -691,16 +691,49 @@ window.closeEntry = function() { document.getElementById('modal-entry').classLis
 window.onFilePick = function(ev) {
   const file = ev.target.files[0];
   if (!file) return;
-  document.getElementById('e-fname').textContent = file.name;
-  if (file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = ev2 => {
-      pendingFile = ev2.target.result;
-      const img = document.getElementById('e-preview');
-      img.src = pendingFile; img.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
+  const fnEl = document.getElementById('e-fname');
+  const previewImg = document.getElementById('e-preview');
+
+  if (!file.type.startsWith('image/')) {
+    fnEl.textContent = file.name + ' (non-image, cannot attach)';
+    return;
   }
+
+  fnEl.textContent = '⏳ Compressing image...';
+  previewImg.style.display = 'none';
+
+  const reader = new FileReader();
+  reader.onload = function(ev2) {
+    const original = new Image();
+    original.onload = function() {
+      // Resize to max 1024px wide/tall, compress to ~80KB
+      const MAX = 1024;
+      let w = original.width, h = original.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(original, 0, 0, w, h);
+
+      // Start at quality 0.7, reduce until under 700KB
+      let quality = 0.7;
+      let compressed = canvas.toDataURL('image/jpeg', quality);
+      while (compressed.length > 700000 && quality > 0.2) {
+        quality -= 0.1;
+        compressed = canvas.toDataURL('image/jpeg', quality);
+      }
+
+      pendingFile = compressed;
+      previewImg.src = compressed;
+      previewImg.style.display = 'block';
+      const kb = Math.round(compressed.length * 0.75 / 1024);
+      fnEl.textContent = `✓ Photo ready (${kb} KB)`;
+    };
+    original.src = ev2.target.result;
+  };
+  reader.readAsDataURL(file);
 };
 
 window.saveEntry = async function() {
@@ -747,16 +780,31 @@ window.doLogin = async function() {
   const email = document.getElementById('login-email').value.trim();
   const pw = document.getElementById('login-password').value;
   const btn = document.getElementById('login-btn');
-  const err = document.getElementById('login-error');
-  err.textContent = '';
-  if (!email || !pw) { err.textContent = 'Please enter email and password.'; return; }
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+
+  if (!email || !pw) { errEl.textContent = 'Please enter your email and password.'; return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Signing in...';
+
   try {
     await signInWithEmailAndPassword(auth, email, pw);
+    // success — onAuthStateChanged will handle the rest
   } catch(e) {
-    err.textContent = e.code === 'auth/invalid-credential' ? 'Wrong email or password.' :
-      e.code === 'auth/too-many-requests' ? 'Too many attempts. Try again later.' : e.message;
-    btn.disabled = false; btn.textContent = 'Sign In';
+    const msgs = {
+      'auth/invalid-credential':    'Wrong email or password. Check and try again.',
+      'auth/invalid-email':         'Email address is not valid.',
+      'auth/user-not-found':        'No account found with this email.',
+      'auth/wrong-password':        'Wrong password. Try again.',
+      'auth/too-many-requests':     'Too many failed attempts. Try again in a few minutes.',
+      'auth/network-request-failed':'No internet connection. Check your WiFi or mobile data.',
+      'auth/user-disabled':         'This account has been disabled.',
+      'auth/api-key-not-valid':     'Firebase API key is wrong. Check your config in the file.',
+    };
+    errEl.textContent = msgs[e.code] || ('Error: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
   }
 };
 
@@ -766,6 +814,12 @@ window.doLogout = async function() {
 };
 
 // ── INIT ──
+function showInitError(msg) {
+  document.getElementById('login-error').textContent = '⚠️ ' + msg;
+  document.getElementById('login-btn').disabled = false;
+  document.getElementById('login-btn').textContent = 'Sign In';
+}
+
 if (!isConfigured) {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
@@ -785,7 +839,6 @@ if (!isConfigured) {
         document.getElementById('fab').style.display = 'flex';
         document.getElementById('user-label').textContent = user.email.split('@')[0];
 
-        // Real-time listener
         const q = query(collection(db, 'entries'), orderBy('date', 'desc'));
         onSnapshot(q, snap => {
           entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -793,7 +846,7 @@ if (!isConfigured) {
           render();
         }, err => {
           document.getElementById('sync-dot').classList.remove('live');
-          showToast('Sync error: ' + err.message, 4000);
+          showToast('Sync error: ' + err.message, 5000);
         });
       } else {
         document.getElementById('login-screen').classList.remove('hidden');
@@ -801,9 +854,11 @@ if (!isConfigured) {
         document.getElementById('fab').style.display = 'none';
         entries = [];
       }
+    }, err => {
+      showInitError('Auth error: ' + err.message);
     });
   } catch(err) {
-    showToast('Firebase init error: ' + err.message, 5000);
+    showInitError('Setup error: ' + err.message);
   }
 }
 
