@@ -443,6 +443,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 // Shim so the rest of the code below works unchanged
 const initializeApp = (cfg) => firebase.initializeApp(cfg);
 const getAuth = (app) => app.auth();
@@ -458,6 +459,10 @@ const serverTimestamp = () => firebase.firestore.FieldValue.serverTimestamp();
 const query = (col, ...constraints) => { let q = col; constraints.forEach(c => { q = c(q); }); return q; };
 const orderBy = (field, dir = 'desc') => (q) => q.orderBy(field, dir);
 const onSnapshot = (q, success, error) => q.onSnapshot({ next: success, error: error });
+const getStorage = (app) => app.storage();
+const ref = (storage, path) => storage.ref(path);
+const uploadBytes = (ref, blob) => ref.put(blob);
+const getDownloadURL = (ref) => ref.getDownloadURL();
 </script>
 <script>
 // ──────────────────────────────────────────────
@@ -475,7 +480,7 @@ const FIREBASE_CONFIG = {
 
 const isConfigured = !FIREBASE_CONFIG.apiKey.includes('PASTE');
 
-let app, auth, db;
+let app, auth, db, storage;
 let entries = [];
 let pendingFile = null;
 
@@ -623,7 +628,7 @@ function renderReceipts() {
   if (!withR.length) { el.innerHTML = '<div style="grid-column:1/-1" class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No receipts yet</div>Attach a photo when adding an entry</div>'; return; }
   el.innerHTML = withR.map(e => `
     <div class="receipt-card" onclick="viewReceipt('${e.id}')">
-      <div class="receipt-thumb">${e.receipt.startsWith('data:image') ? `<img src="${e.receipt}" />` : '📄'}</div>
+         <div class="receipt-thumb">${e.receipt.startsWith('http') ? `<img src="${e.receipt}" />` : '📄'}</div>
       <div class="receipt-info"><div class="receipt-info-name">${escHtml(e.description||'Receipt')}</div><div class="receipt-info-date">${fmtDate(e.date)}</div></div>
     </div>`).join('');
 }
@@ -633,7 +638,7 @@ window.viewReceipt = function(id) {
   if (!e) return;
   document.getElementById('rv-title').textContent = e.description || 'Receipt';
   const img = document.getElementById('receipt-viewer-img');
-  img.style.display = e.receipt && e.receipt.startsWith('data:image') ? 'block' : 'none';
+ img.style.display = e.receipt && e.receipt.startsWith('http') ? 'block' : 'none';
   if (img.style.display === 'block') img.src = e.receipt;
   const info = getInfo(e);
   document.getElementById('rv-info').innerHTML =
@@ -723,7 +728,7 @@ window.saveEntry = async function() {
       type, description: desc, amount, date,
       category: type === 'expense' ? cat : null,
       notes: notes || null,
-      receipt: pendingFile || null,
+      receipt: receiptUrl, // ✅ URL only
       createdAt: serverTimestamp(),
       createdBy: auth.currentUser?.email || 'unknown'
     });
@@ -777,6 +782,7 @@ if (!isConfigured) {
     app = initializeApp(FIREBASE_CONFIG);
     auth = getAuth(app);
     db = getFirestore(app);
+storage = getStorage(app);
 
     onAuthStateChanged(auth, user => {
       if (user) {
