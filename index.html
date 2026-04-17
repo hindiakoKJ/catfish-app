@@ -628,6 +628,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t);font-s
     <div class="fg"><label>Full name</label><input id="emp-name" placeholder="e.g. Pedro Santos"/></div>
     <div class="fg"><label>Role / position</label><input id="emp-role-inp" placeholder="e.g. Farm worker, Driver..."/></div>
     <div class="fg"><label>Branch assigned</label><select id="emp-branch"></select></div>
+    <div class="fg">
+      <label>Login email (for QR clock in/out)</label>
+      <input id="emp-linked-email" type="email" placeholder="e.g. pedro@gmail.com"/>
+      <div style="font-size:11px;color:var(--t3);margin-top:4px;">Link this employee to their app login account so they can clock in/out with QR.</div>
+    </div>
     <div class="fg"><label>Daily rate (₱) — visible to owner only</label><input id="emp-rate" type="number" placeholder="e.g. 500" min="0"/></div>
     <div class="fg"><label>Regular hours per day</label><input id="emp-reg-hrs" type="number" placeholder="8" min="1" max="24" value="8"/></div>
     <button class="btn-g" id="emp-save-btn" onclick="saveEmployee()">Save employee</button>
@@ -713,6 +718,15 @@ const FIREBASE_CONFIG = {
   appId: "1:1019229341744:web:ae112945e73866a2e805f5"
 };
 const isConfigured = !FIREBASE_CONFIG.apiKey.includes('PASTE');
+
+// ══════════════════════════════════════════════════════════════
+// OWNER EMAILS — add both owner email addresses here.
+// These accounts ALWAYS get owner access, no setup needed.
+// ══════════════════════════════════════════════════════════════
+const OWNER_EMAILS = [
+  "hnskjygg@gmail.com",
+  "pixelskj1@gmail.com"
+];
 
 // ── STATE ──
 let app, auth, db;
@@ -1276,6 +1290,7 @@ window.openAddEmployee=function(id){
   document.getElementById('emp-role-inp').value=emp?.role||'';
   document.getElementById('emp-rate').value=emp?.dailyRate??'';
   document.getElementById('emp-reg-hrs').value=emp?.regularHours??8;
+  document.getElementById('emp-linked-email').value=emp?.linkedEmail||'';
   renderBranchTabs();
   setTimeout(()=>{const sel=document.getElementById('emp-branch');if(sel&&emp?.branch)sel.value=emp.branch;},50);
   document.getElementById('modal-add-emp').classList.add('open');
@@ -1285,12 +1300,13 @@ window.saveEmployee=async function(){
   const name=document.getElementById('emp-name').value.trim();
   const empRole=document.getElementById('emp-role-inp').value.trim();
   const branch=document.getElementById('emp-branch').value;
+  const linkedEmail=document.getElementById('emp-linked-email').value.trim().toLowerCase();
   const rate=parseFloat(document.getElementById('emp-rate').value)||0;
   const regHrs=parseFloat(document.getElementById('emp-reg-hrs').value)||8;
   if(!name){showToast('Please enter employee name');return;}
   const btn=document.getElementById('emp-save-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>';
   try{
-    const data={name,role:empRole||null,branch:branch||null,dailyRate:rate,regularHours:regHrs,updatedAt:serverTimestamp()};
+    const data={name,role:empRole||null,branch:branch||null,linkedEmail:linkedEmail||null,dailyRate:rate,regularHours:regHrs,updatedAt:serverTimestamp()};
     if(editingEmpId){
       await setDoc(doc(db,'employees',editingEmpId),data,{merge:true});
       if(isManager()) await logManagerChange('Edited employee',name);
@@ -1581,13 +1597,30 @@ if(!isConfigured){
         currentUser=user;
         // load user profile from Firestore
         try{
+          // Check owner emails first — owners always have owner access
+          const emailLower = user.email.toLowerCase();
+          const isHardcodedOwner = OWNER_EMAILS.map(e=>e.toLowerCase()).includes(emailLower);
+
           const profSnap=await db.collection('userProfiles').where('email','==',user.email).limit(1).get();
-          if(!profSnap.empty){userProfile=profSnap.docs[0].data();}
-          else{
-            // fallback: if no profile exists, default to staff for safety
-            userProfile={role:'staff',name:user.email.split('@')[0],email:user.email};
+          if(!profSnap.empty){
+            const profileData = profSnap.docs[0].data();
+            // Owner email always gets owner role even if profile says otherwise
+            userProfile = isHardcodedOwner ? {...profileData, role:'owner'} : profileData;
+          } else if(isHardcodedOwner){
+            // Owner email but no profile yet — auto-create owner profile
+            const ownerData = {role:'owner', name:user.email.split('@')[0], email:user.email, createdAt:serverTimestamp()};
+            await db.collection('userProfiles').add(ownerData);
+            userProfile = {role:'owner', name:user.email.split('@')[0], email:user.email};
+          } else {
+            // No profile found and not an owner — show role setup screen
+            userProfile = {role:'staff', name:user.email.split('@')[0], email:user.email};
+            showToast('⚠️ No role assigned yet. Ask the owner to add you in the Users tab.', 5000);
           }
-        }catch(e){userProfile={role:'staff',name:user.email.split('@')[0],email:user.email};}
+        }catch(e){
+          const emailLower = user.email.toLowerCase();
+          const isHardcodedOwner = OWNER_EMAILS.map(e=>e.toLowerCase()).includes(emailLower);
+          userProfile={role:isHardcodedOwner?'owner':'staff', name:user.email.split('@')[0], email:user.email};
+        }
 
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
